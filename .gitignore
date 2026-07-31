@@ -1,0 +1,51 @@
+# Unity generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Build output. The Windows build is a large binary artefact and is produced by
+# Tools/build_windows.sh; it is deliberately not committed. docs/BUILD_REPORT.md
+# records the expected path and how to reproduce it.
+/Builds/**/*
+!/Builds/**/.gitkeep
+
+# Asset meta files for ignored folders
+/[Aa]ssets/AssetStoreTools*
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# Generated art. ShedTextureGenerator recreates these deterministically from
+# source code, so the PNGs are regenerated rather than version-controlled.
+/Assets/Game/Art/Textures/Generated/*.png
+/Assets/Game/Art/Textures/Generated/*.png.meta
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# Crash reports
+sysinfo.txt
+crashlytics-build.properties
