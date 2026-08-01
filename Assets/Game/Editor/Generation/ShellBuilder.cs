@@ -298,11 +298,22 @@ namespace Freedome.EditorTools.Generation
             float sheathingZ = Dim.StudDepth;
             float claddingZ = sheathingZ + Dim.BoardThickness;
 
+            // The panels are split into cells around the openings, and a cell's own
+            // proportions are no guide to which way its boards run - a tall narrow
+            // cell beside a door would end up grained at right angles to the wide
+            // one above it. Both layers are boarded horizontally, so both are forced
+            // along the wall.
+            mb.GrainOverride = Vector3.right;
             FramingUtility.AddPanelWithOpenings(mb, frame.Length, Dim.WallHeight,
                 Dim.BoardThickness, sheathingZ, openings, 1, 0.002f);
 
+            // Weatherboards lap horizontally whichever way round the wall is, and
+            // the generated texture stacks its boards along V - so V must be up.
+            mb.GrainOverride = Vector3.up;
             FramingUtility.AddPanelWithOpenings(mb, frame.Length, Dim.WallHeight,
                 Dim.CladdingThickness, claddingZ, openings, 2, 0.002f);
+
+            mb.GrainOverride = null;
 
             if (isGable)
             {

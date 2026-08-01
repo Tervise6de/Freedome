@@ -225,8 +225,13 @@ namespace Freedome.EditorTools.Generation
                           new Vector3(0.016f, height, 0.045f), 1, 0.002f);
             }
 
+            // The hole grid is baked into the texture at a 25 mm pitch, so the board
+            // must be mapped square to itself. Forcing V up keeps the rows level
+            // regardless of whether the panel is taller or wider.
+            mb.GrainOverride = Vector3.up;
             mb.AddBox(new Vector3(0.016f + (t * 0.5f), 0f, 0f),
                       new Vector3(t, height, Width), 0, 0.001f);
+            mb.GrainOverride = null;
 
             BuildPegboardTools(mb, 0.016f + t);
 

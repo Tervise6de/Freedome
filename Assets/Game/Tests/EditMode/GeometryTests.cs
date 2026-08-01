@@ -73,6 +73,107 @@ namespace Freedome.Tests.EditMode
             Assert.AreEqual(4f, largeUv.size.x, 0.001f, "a 4 m face should span four UV units");
         }
 
+        // ------------------------------------------------------------------
+        // Grain direction
+        //
+        // The generated timber textures run their fibre along V. If V is chosen
+        // from the dominant world axis of each face - the obvious approach - then
+        // every horizontal member gets vertical grain, because the side of a top
+        // plate faces sideways whichever way the plate runs. These tests pin the
+        // rule down: V follows the length of the piece.
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void GrainRunsAlongTheLengthOfAHorizontalMember()
+        {
+            // A top plate: 4 m long, 45 thick, 90 deep.
+            MeshBuilder mb = new MeshBuilder("plate");
+            mb.AddBox(Vector3.zero, new Vector3(4.0f, 0.045f, 0.090f), 0);
+
+            Bounds uv = UvBounds(mb.ToMesh());
+
+            Assert.AreEqual(4.0f, uv.size.y, 0.001f,
+                "V should span the 4 m length, so the fibre runs along the plate");
+            Assert.AreEqual(0.090f, uv.size.x, 0.001f,
+                "U should span the section, not the length");
+        }
+
+        [Test]
+        public void GrainStaysVerticalOnAVerticalMember()
+        {
+            // A stud: 45 x 90 section, 2.265 m long.
+            MeshBuilder mb = new MeshBuilder("stud");
+            mb.AddBox(Vector3.zero, new Vector3(0.045f, 2.265f, 0.090f), 0);
+
+            Bounds uv = UvBounds(mb.ToMesh());
+
+            Assert.AreEqual(2.265f, uv.size.y, 0.001f,
+                "V should span the stud's length");
+        }
+
+        [Test]
+        public void RotatedMemberCarriesItsGrainWithIt()
+        {
+            // A rafter laid on the roof pitch. Its length no longer points along a
+            // world axis, which is exactly the case the old mapping got wrong.
+            MeshBuilder mb = new MeshBuilder("rafter");
+            mb.AddBox(Vector3.zero, new Vector3(2.60f, 0.090f, 0.045f),
+                      Quaternion.Euler(0f, 0f, -22f), 0);
+
+            Bounds uv = UvBounds(mb.ToMesh());
+
+            Assert.AreEqual(2.60f, uv.size.y, 0.002f,
+                "V should still span the rafter's length after it is tilted");
+        }
+
+        [Test]
+        public void GrainOverrideBeatsThePiecesOwnProportions()
+        {
+            // A wall panel wider than it is tall. Weatherboards still have to lap
+            // horizontally, so the override has to win.
+            MeshBuilder mb = new MeshBuilder("panel") { GrainOverride = Vector3.up };
+            mb.AddBox(Vector3.zero, new Vector3(2.40f, 1.20f, 0.016f), 0);
+
+            Bounds uv = UvBounds(mb.ToMesh());
+
+            Assert.AreEqual(1.20f, uv.size.y, 0.001f,
+                "V should follow the forced up axis, not the panel's longer side");
+        }
+
+        [Test]
+        public void GrainOverrideAppliesToHandBuiltFaces()
+        {
+            // Gable ends are emitted as raw quads rather than boxes, so the
+            // override has to reach them too.
+            MeshBuilder mb = new MeshBuilder("gable") { GrainOverride = Vector3.up };
+            mb.AddQuad(new Vector3(0f, 0f, 0f), new Vector3(3f, 0f, 0f),
+                       new Vector3(3f, 1.1f, 0f), new Vector3(0f, 1.1f, 0f), 0);
+
+            Bounds uv = UvBounds(mb.ToMesh());
+
+            Assert.AreEqual(1.1f, uv.size.y, 0.001f, "V should follow the forced axis");
+            Assert.AreEqual(3.0f, uv.size.x, 0.001f, "U should run across it");
+        }
+
+        [Test]
+        public void SawnEndsFallBackToEndGrain()
+        {
+            // On the end of a board the grain points straight out of the face, so
+            // there is no direction to follow and the axis-aligned mapping applies.
+            // The check is simply that it produces sane finite UVs rather than a
+            // division by a zero-length vector.
+            MeshBuilder mb = new MeshBuilder("post");
+            mb.AddBox(Vector3.zero, new Vector3(0.09f, 2.0f, 0.09f), 0);
+
+            Mesh mesh = mb.ToMesh();
+            foreach (Vector2 uv in mesh.uv)
+            {
+                Assert.IsFalse(float.IsNaN(uv.x) || float.IsNaN(uv.y), "UV is not finite");
+                Assert.Less(Mathf.Abs(uv.x), 10f);
+                Assert.Less(Mathf.Abs(uv.y), 10f);
+            }
+        }
+
         [Test]
         public void SubmeshesAreKeptSeparate()
         {

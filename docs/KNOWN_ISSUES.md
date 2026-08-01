@@ -131,38 +131,30 @@ and butts against rafters whose position is computed independently. Small
 overlaps or gaps at those junctions are plausible. Screenshot 6 (ceiling and roof
 structure) is the one that would show it.
 
-### 8. Wood grain direction
-
-**Risk: low, visual.** UVs are planar-projected against each face's dominant
-axis, so grain direction follows geometry rather than following each board's
-length. On a stud seen face-on it is right; on some faces the grain will run
-across the board instead of along it. Fixing it properly means per-object UV axis
-control in `MeshBuilder`. Probably not noticeable at 1 m; check screenshot 4.
-
-### 9. Prop contact with the floor
+### 8. Prop contact with the floor
 
 **Risk: low.** Props are placed by computed base points, not dropped onto
 collision. Anything whose local origin is not exactly at its base will float or
 sink by a few millimetres. Screenshot 7 exists specifically to catch this.
 
-### 10. `ProjectVersion.txt`
+### 9. `ProjectVersion.txt`
 
 **Risk: low, cosmetic.** `6000.0.58f1` was written without a Unity install to
 confirm the patch number. Any 6000.0.x opens the project with an upgrade prompt.
 
-### 11. Legacy input assumption
+### 10. Legacy input assumption
 
 **Risk: low.** The controller uses the legacy `Input` class. The new Input System
 package is deliberately absent from the manifest so the old input handling stays
 active. If anyone adds `com.unity.inputsystem`, set Active Input Handling to
 "Both" or the controller stops responding.
 
-### 12. Pause menu at non-16:9 aspect ratios
+### 11. Pause menu at non-16:9 aspect ratios
 
 **Risk: low.** The canvas scales with a 1920 x 1080 reference at match 0.5.
 Untested at ultrawide or 4:3.
 
-### 13. Screenshot capture without a bake
+### 12. Screenshot capture without a bake
 
 **Risk: low.** `ScreenshotCapture` renders through a temporary camera. If it is
 run before lighting is baked the shots will show the unbaked room, which is not
@@ -202,6 +194,7 @@ Recorded because the method that caught them is worth repeating.
 | Gable sheathing stopped at the rafter underside, leaving an open slot the full length of both gable rakes | Preview render 03 - sky visible through the roof junction | Taken up to `RoofBuilder.TroughY` instead, matching the eaves blocking |
 | Window sill board's top face was coplanar with the framing sill trimmer | Preview render 08 - z-fighting speckle right where the player leans in | Sill board now sits on the trimmer rather than flush with it |
 | Top-shelf sack used the tarpaulin material, so a bag of feed read as a folded blue groundsheet | Preview render 02 | Switched to the card material - a paper sack |
+| Wood grain ran across every horizontal member instead of along it. UVs projected against each face's dominant world axis, and the side of a top plate faces sideways whichever way the plate runs, so V ended up vertical on plates, rafters, purlins, collar ties, noggins and bench rails | Reading `MeshBuilder.PlanarUv` against what `SamplePine` actually generates | `MeshBuilder` now derives the UV frame from a grain direction: V follows the piece's own longest axis, carried through its rotation, with `GrainOverride` for materials that have a direction the geometry does not imply |
 
 Drawing the room to scale, and then rasterising it, from the same numbers the
 generator uses caught six faults that no amount of reading the code would have.

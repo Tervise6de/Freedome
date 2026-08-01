@@ -54,9 +54,8 @@ survive, with a test to prove it.
 
 ## 3. UVs measured in metres
 
-**Decision.** Every face is planar-unwrapped against its dominant axis with
-coordinates in metres, and every generated texture covers exactly one square
-metre and tiles seamlessly.
+**Decision.** Every face is planar-unwrapped with coordinates in metres, and
+every generated texture covers exactly one square metre and tiles seamlessly.
 
 **Why.** Consistent texture scale is an acceptance criterion, and the usual way
 to get it wrong is per-object tiling values that drift. With metre UVs there is
@@ -64,10 +63,18 @@ nothing to set: a bench top, a wall and a floorboard get identical grain density
 because they are all measured the same way. Material tiling stays at 1:1
 everywhere.
 
-**Cost.** Grain direction follows geometry rather than each board's length, so
-on some faces the grain runs across the board. See KNOWN_ISSUES.md #7. The fix
-is per-object UV axis control, which is more machinery than the problem has so
-far earned.
+**Refinement.** Measuring UVs in metres fixes scale but says nothing about
+*direction*, and the first implementation picked the axes from each face's
+dominant world axis. That put the fibre across every horizontal member: the side
+of a top plate faces sideways whichever way the plate runs, so V came out
+vertical on plates, rafters, purlins, collar ties, noggins and bench rails.
+
+`MeshBuilder` now builds the frame from a grain direction instead - V follows the
+piece's own longest axis, carried through its rotation - which fixes the whole
+scene without annotating a single call site. `GrainOverride` handles the cases
+where the material has a direction the geometry does not imply. Both behaviours
+are pinned by tests, because with no renderer here that is the only way to state
+the intent.
 
 ---
 

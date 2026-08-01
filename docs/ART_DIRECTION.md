@@ -69,7 +69,16 @@ Two constraints shape all of them:
 1. **Each map covers exactly one square metre.** Paired with UVs measured in
    metres, that means a board, a wall and a bench top all get identical grain
    density with no per-object tiling values to get wrong.
-2. **Each map tiles seamlessly.** The noise library (`TilingNoise`) is periodic
+2. **Grain follows the piece.** The timber maps run their fibre along V, and
+   `MeshBuilder` builds each face's UV frame from a grain direction rather than
+   from the face's dominant world axis: V follows the piece's own longest axis,
+   carried through whatever rotation it has, so a rafter tilted to the roof pitch
+   is still grained along the rafter. Sawn ends, where the grain points out of
+   the face, fall back to the axis-aligned mapping and read as end grain.
+   `GrainOverride` forces the axis where the material has a direction the
+   geometry does not imply - weatherboards lap horizontally whichever way round
+   the wall is, and pegboard holes have to stay on their grid.
+3. **Each map tiles seamlessly.** The noise library (`TilingNoise`) is periodic
    by construction rather than relying on `Mathf.PerlinNoise`, which does not
    tile. Where a pattern has to line up with the grid - pegboard holes at a 25 mm
    pitch (40/m), weatherboards at 143 mm (7/m) - the pitch was chosen to divide

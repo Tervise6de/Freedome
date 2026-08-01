@@ -36,6 +36,19 @@ namespace Freedome.EditorTools.Generation
         /// <summary>Metres per texture tile. 1 means one tile per metre.</summary>
         public float UvScale { get; set; } = 1f;
 
+        /// <summary>
+        /// Forces the direction the material's V axis runs, in builder-local space.
+        /// Leave it null and each piece uses its own longest axis instead.
+        ///
+        /// Set it where the material has a direction the geometry does not imply -
+        /// weatherboards have to lap horizontally whichever way the wall is longer,
+        /// and pegboard holes have to stay on their grid.
+        /// </summary>
+        public Vector3? GrainOverride { get; set; }
+
+        /// <summary>Resolved grain for the primitive currently being emitted.</summary>
+        private Vector3 _grain;
+
         public MeshBuilder(string name, int submeshCount = 1)
         {
             Name = name;
@@ -178,6 +191,12 @@ namespace Freedome.EditorTools.Generation
 
             Push(Matrix4x4.TRS(centre, rotation, Vector3.one));
 
+            // Sawn timber's grain runs along the length of the piece, so that is
+            // what the V axis follows unless a caller has forced otherwise. Every
+            // face of the box shares it, which is what makes the grain wrap round
+            // a board continuously instead of turning a corner.
+            SetGrain(LongestAxis(size));
+
             if (b <= 0.00005f)
             {
                 AddPlainBox(half, submesh);
@@ -188,6 +207,36 @@ namespace Freedome.EditorTools.Generation
             }
 
             Pop();
+            _grain = Vector3.zero;
+        }
+
+        /// <summary>The piece's own long axis, in its local space.</summary>
+        private static Vector3 LongestAxis(Vector3 size)
+        {
+            if (size.x >= size.y && size.x >= size.z)
+            {
+                return Vector3.right;
+            }
+            return size.y >= size.z ? Vector3.up : Vector3.forward;
+        }
+
+        /// <summary>
+        /// Records the grain direction in builder space. An explicit override wins;
+        /// otherwise the local axis is carried through the current transform, so a
+        /// rafter tilted to the roof pitch keeps its grain along the rafter rather
+        /// than along the world axis it happens to point closest to.
+        /// </summary>
+        private void SetGrain(Vector3 localAxis)
+        {
+            if (GrainOverride.HasValue)
+            {
+                Vector3 forced = GrainOverride.Value;
+                _grain = forced.sqrMagnitude > 1e-8f ? forced.normalized : Vector3.zero;
+                return;
+            }
+
+            Vector3 inBuilderSpace = _current.MultiplyVector(localAxis);
+            _grain = inBuilderSpace.sqrMagnitude > 1e-8f ? inBuilderSpace.normalized : Vector3.zero;
         }
 
         private void AddPlainBox(Vector3 h, int submesh)
@@ -443,6 +492,9 @@ namespace Freedome.EditorTools.Generation
 
             Push(Matrix4x4.TRS(origin, rotation, Vector3.one));
 
+            // An extrusion's length is its local +Z, which is the way the timber runs.
+            SetGrain(Vector3.forward);
+
             float z0 = 0f;
             float z1 = length;
 
@@ -468,6 +520,7 @@ namespace Freedome.EditorTools.Generation
             }
 
             Pop();
+            _grain = Vector3.zero;
         }
 
         // ------------------------------------------------------------------
@@ -537,11 +590,37 @@ namespace Freedome.EditorTools.Generation
         }
 
         /// <summary>
-        /// Planar projection against the dominant axis of the normal, in metres.
-        /// This is what keeps texture scale identical on every surface in the shed.
+        /// Planar projection in metres, which is what keeps texture scale identical
+        /// on every surface in the shed.
+        ///
+        /// Where a grain direction is known the frame is built from it: V follows
+        /// the grain projected onto the face and U runs across it. Projecting
+        /// against the dominant world axis instead - the obvious approach - puts
+        /// vertical grain on every horizontal member, because the side of a rafter
+        /// faces sideways whichever way the rafter runs. Faces whose normal is
+        /// parallel to the grain are the sawn ends, and fall through to the
+        /// axis-aligned mapping so they read as end grain.
         /// </summary>
         private Vector2 PlanarUv(Vector3 p, Vector3 n)
         {
+            // Raw quads and triangles never set a per-piece grain, so an override
+            // still applies to them - that is how a hand-built shape like a gable
+            // end gets the same treatment as a box.
+            Vector3 grain = _grain.sqrMagnitude > 1e-8f
+                ? _grain
+                : (GrainOverride ?? Vector3.zero);
+
+            if (grain.sqrMagnitude > 1e-8f)
+            {
+                Vector3 along = grain - (n * Vector3.Dot(grain, n));
+                if (along.sqrMagnitude > 1e-4f)
+                {
+                    along.Normalize();
+                    Vector3 across = Vector3.Cross(n, along);
+                    return new Vector2(Vector3.Dot(p, across), Vector3.Dot(p, along)) * UvScale;
+                }
+            }
+
             float ax = Mathf.Abs(n.x);
             float ay = Mathf.Abs(n.y);
             float az = Mathf.Abs(n.z);
