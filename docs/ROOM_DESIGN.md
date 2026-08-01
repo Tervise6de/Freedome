@@ -275,3 +275,15 @@ shipped build rather than from the editor.
 
 **None of these figures have been measured.** The scene has never been
 generated or run - see [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+
+
+## Window, revised
+
+The window is two lights, 900 mm overall. The left one is fixed, glazed into the
+frame behind beads. The right one is an opening casement - stiles and rails
+around its own pane, a lever catch, hung on the outer stile and swinging 72
+degrees outward.
+
+It was originally a single fixed light with a glazing bar across it. The
+casement was added when the interaction milestone reached the window and found
+there was nothing there to open.

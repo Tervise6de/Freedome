@@ -187,6 +187,40 @@ namespace Freedome.Tests.EditMode
         }
 
         [Test]
+        public void WindowCasementSwingsOutward()
+        {
+            // The window assembly is rotated 90 degrees about Y, so work in its own
+            // frame: local +X runs along the wall, local +Z points out of the
+            // building. The sash hangs at -X from its hinge, so a positive angle has
+            // to carry it to positive local Z.
+            for (int step = 1; step <= 12; step++)
+            {
+                float angle = OpeningsBuilder.CasementOpenAngleDegrees * (step / 12f);
+                Vector3 tip = Quaternion.AngleAxis(angle, Vector3.up) *
+                              new Vector3(-OpeningsBuilder.CasementSashHalfWidth, 0f, 0f);
+
+                Assert.Greater(tip.z, 0f,
+                    $"at {angle:0} deg the casement is at local z={tip.z:0.000}, " +
+                    "which is back through the wall into the room");
+            }
+        }
+
+        [Test]
+        public void WindowCasementStaysInsideItsReveal()
+        {
+            // The sash must sit within the hole in the wall, or it fouls the lining
+            // on the way past and the exterior architrave beyond that.
+            float hingeX = OpeningsBuilder.CasementHingeLocalX;
+            float halfW = OpeningsBuilder.CasementSashHalfWidth;
+            float revealHalf = ShedDimensions.WindowWidth * 0.5f;
+
+            Assert.LessOrEqual(hingeX, revealHalf - 0.005f,
+                $"the casement hinge at x={hingeX:0.000} is outside the {revealHalf:0.000} m reveal");
+            Assert.GreaterOrEqual(hingeX - (halfW * 2f), -revealHalf - 0.005f,
+                "the closed casement overhangs the far side of the reveal");
+        }
+
+        [Test]
         public void ServicePanelHingeSitsOnItsFarEdge()
         {
             float hingeZ = ShellBuilder.ServicePanelHingeZ;

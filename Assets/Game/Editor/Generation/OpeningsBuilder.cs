@@ -110,6 +110,23 @@ namespace Freedome.EditorTools.Generation
         /// </summary>
         public const float DoorOpenAngleDegrees = 92f;
 
+        /// <summary>
+        /// Casement swing. Positive is outward for the same left-handed reason the
+        /// door's is, but the window assembly is rotated 90 degrees about Y, so the
+        /// sash's local -X is what moves: outward is still positive here.
+        /// </summary>
+        public const float CasementOpenAngleDegrees = 72f;
+
+        /// <summary>Half the sash's width, and its hinge position in the window's
+        /// own local frame. Exposed so the tests read the built values.</summary>
+        public static float CasementPaneWidth =>
+            ((Dim.WindowWidth - 0.04f - (Dim.WindowFrameWidth * 2f)) * 0.5f) - 0.015f;
+
+        public static float CasementSashHalfWidth => (CasementPaneWidth * 0.5f) + 0.032f;
+
+        public static float CasementHingeLocalX =>
+            (CasementPaneWidth * 0.5f) + 0.017f + CasementSashHalfWidth;
+
         /// <summary>Z of the closed leaf, relative to the inner face of the wall.</summary>
         public static float DoorLeafClosedZ => -Dim.WallThickness + 0.0225f + 0.025f;
 
@@ -310,26 +327,22 @@ namespace Freedome.EditorTools.Generation
             mb.AddBox(new Vector3(0f, (glassTop + glassBottom) * 0.5f, frameZ + (fd * 0.5f)),
                       new Vector3(0.030f, glassTop - glassBottom, fd), 0, 0.002f);
 
-            // Glass, one pane each side of the bar.
+            // Only the left light is glazed into the frame. The right one is an
+            // opening casement, built separately below - which is how a two-light
+            // shed window is normally made: one fixed, one that opens.
             float paneWidth = ((Dim.WindowWidth - 0.04f - (fw * 2f)) * 0.5f) - 0.015f;
-            foreach (int s in new[] { -1, 1 })
-            {
-                mb.AddBox(new Vector3(s * ((paneWidth * 0.5f) + 0.017f),
-                                      (glassTop + glassBottom) * 0.5f,
-                                      frameZ + (fd * 0.5f)),
-                          new Vector3(paneWidth, glassTop - glassBottom, Dim.GlassThickness), 1);
-            }
+            mb.AddBox(new Vector3(-((paneWidth * 0.5f) + 0.017f),
+                                  (glassTop + glassBottom) * 0.5f,
+                                  frameZ + (fd * 0.5f)),
+                      new Vector3(paneWidth, glassTop - glassBottom, Dim.GlassThickness), 1);
 
-            // Glazing beads holding the panes in on the room side.
-            foreach (int s in new[] { -1, 1 })
-            {
-                mb.AddBox(new Vector3(s * ((paneWidth * 0.5f) + 0.017f), glassBottom + 0.006f,
-                                      frameZ + 0.012f),
-                          new Vector3(paneWidth, 0.012f, 0.012f), 0, 0.002f);
-                mb.AddBox(new Vector3(s * ((paneWidth * 0.5f) + 0.017f), glassTop - 0.006f,
-                                      frameZ + 0.012f),
-                          new Vector3(paneWidth, 0.012f, 0.012f), 0, 0.002f);
-            }
+            // Glazing beads holding the fixed pane in on the room side.
+            mb.AddBox(new Vector3(-((paneWidth * 0.5f) + 0.017f), glassBottom + 0.006f,
+                                  frameZ + 0.012f),
+                      new Vector3(paneWidth, 0.012f, 0.012f), 0, 0.002f);
+            mb.AddBox(new Vector3(-((paneWidth * 0.5f) + 0.017f), glassTop - 0.006f,
+                                  frameZ + 0.012f),
+                      new Vector3(paneWidth, 0.012f, 0.012f), 0, 0.002f);
 
             // Interior sill board. A shed window always ends up as a shelf.
             // It sits ON the framing sill trimmer rather than flush with it: the
@@ -352,10 +365,79 @@ namespace Freedome.EditorTools.Generation
             mb.AddBox(new Vector3(0f, head + 0.076f, wall + 0.020f),
                       new Vector3(Dim.WindowWidth + 0.180f, 0.008f, 0.055f), 2, 0.002f);
 
+            Vector3 assemblyPosition = new Vector3(Dim.HalfWidth, 0f, Dim.WindowCentreZ);
+            Quaternion assemblyRotation = Quaternion.Euler(0f, 90f, 0f);
+
             ctx.CreateObject("Window_Assembly", mb,
                 new[] { Keys.StructuralPine, Keys.Glass, Keys.Galvanised },
-                parent, new Vector3(Dim.HalfWidth, 0f, Dim.WindowCentreZ),
-                Quaternion.Euler(0f, 90f, 0f), BuildContext.ColliderKind.Mesh);
+                parent, assemblyPosition, assemblyRotation, BuildContext.ColliderKind.Mesh);
+
+            BuildWindowCasement(ctx, parent, assemblyPosition, assemblyRotation,
+                                paneWidth, glassBottom, glassTop, frameZ);
+        }
+
+        /// <summary>
+        /// The opening light: a sash of stiles and rails around one pane, hung on the
+        /// outer stile and swinging outward.
+        ///
+        /// Built in the window assembly's own frame - local +X runs along the wall,
+        /// local +Z points out of the building - so the hinge group carries the
+        /// assembly's rotation and the sash only ever needs a local rotation.
+        /// </summary>
+        private static void BuildWindowCasement(BuildContext ctx, Transform parent,
+                                                Vector3 assemblyPosition,
+                                                Quaternion assemblyRotation,
+                                                float paneWidth, float glassBottom,
+                                                float glassTop, float frameZ)
+        {
+            const float SashSection = 0.032f;
+            const float SashDepth = 0.042f;
+
+            float lightCentreX = (paneWidth * 0.5f) + 0.017f;
+            float halfW = (paneWidth * 0.5f) + SashSection;
+            float halfH = ((glassTop - glassBottom) * 0.5f) + SashSection;
+            float centreY = (glassTop + glassBottom) * 0.5f;
+            float z = frameZ + (SashDepth * 0.5f);
+
+            // 0 timber, 1 glass, 2 hardware
+            MeshBuilder mb = new MeshBuilder("Window_Casement", 3);
+
+            foreach (int sx in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(sx * (halfW - (SashSection * 0.5f)), 0f, 0f),
+                          new Vector3(SashSection, halfH * 2f, SashDepth), 0, 0.002f);
+            }
+            foreach (int sy in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(0f, sy * (halfH - (SashSection * 0.5f)), 0f),
+                          new Vector3((halfW - SashSection) * 2f, SashSection, SashDepth), 0, 0.002f);
+            }
+
+            mb.AddBox(Vector3.zero,
+                      new Vector3(paneWidth, glassTop - glassBottom, Dim.GlassThickness), 1);
+
+            // A stay and a simple lever catch on the stile that swings.
+            mb.AddBox(new Vector3(-(halfW - 0.012f), 0f, -(SashDepth * 0.5f) - 0.008f),
+                      new Vector3(0.070f, 0.016f, 0.010f), 2, 0.002f);
+
+            // Hinge on the outer stile, sash offset back toward the glazing bar.
+            Vector3 hingeLocal = new Vector3(lightCentreX + halfW, centreY, z);
+            GameObject hinge = ctx.CreateGroup("Window_CasementHinge", parent);
+            hinge.transform.localPosition = assemblyPosition + (assemblyRotation * hingeLocal);
+            hinge.transform.localRotation = assemblyRotation;
+            BuildContext.MarkMovable(hinge);
+
+            GameObject sash = ctx.CreateObject("Window_Casement", mb,
+                new[] { Keys.StructuralPine, Keys.Glass, Keys.Hardware },
+                hinge.transform, new Vector3(-halfW, 0f, 0f), Quaternion.identity,
+                BuildContext.ColliderKind.Box, isStatic: false);
+
+            if (sash != null)
+            {
+                HingedPart part = hinge.AddComponent<HingedPart>();
+                part.Configure("Open the window", "Close the window", Vector3.up,
+                               CasementOpenAngleDegrees, 90f, null);
+            }
         }
 
         // =====================================================================

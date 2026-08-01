@@ -199,7 +199,7 @@ or more valuable than everything around it.
 | # | Affordance | Surface | Height | Moves? |
 | --- | --- | --- | --- | --- |
 | 1 | Door and lock | Entrance wall, z = -3.0 | 0 - 2.04 m | **Yes** - swings outward 92 deg |
-| 2 | Window and frame | Workbench wall, x = +2.0 | 1.20 - 1.80 m | No - casement is still in the shared mesh |
+| 2 | Window and frame | Workbench wall, x = +2.0 | 1.20 - 1.80 m | **Yes** - the right light is an opening casement, 72 deg outward |
 | 3 | Vent | Utility wall, z = +3.0 | 2.05 m | No |
 | 4 | Breaker and circuit | Utility wall + two more walls | 0.35 - 2.30 m | Partly - the light switch works; the consumer unit does not |
 | 5 | Floor panel | Floor, centre-left | 0 m | **Yes** - lifts 78 deg on its far edge |
@@ -216,10 +216,15 @@ anything, gates anything, or is required for anything - there is nothing in this
 project to be required *for*. The floor panel lifts and underneath it are
 joists, because that is what is under a floor.
 
-The three that do not move are held back by the mesh they live in rather than by
-principle: the window casement, the vent louvres and the radio are appended into
-shared meshes for draw-call reasons, and anything that moves needs its own
-object. Splitting them out is mechanical work, not a design decision.
+The two that do not move are held back by the mesh they live in rather than by
+principle: the vent louvres and the radio are appended into shared meshes for
+draw-call reasons, and anything that moves needs its own object.
+
+The window took more than splitting a mesh. It had no casement at all - it was a
+single fixed light, glazed straight into the frame, with a central glazing bar
+making it read as two. There was no sash to hinge. The right-hand light is now a
+real casement: stiles, rails, its own pane and a catch, hung on the outer stile.
+The left one stays fixed, which is how a two-light shed window is usually made.
 
 Four walls, one floor, one shelf; heights from the floor to just under the plate.
 No two of them share a sightline in a way that groups them.
