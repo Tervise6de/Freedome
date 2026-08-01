@@ -11,9 +11,11 @@ no game in it yet, and by design there should not be.
 >
 > The C# *has* since been type-checked, and 31 of the 35 EditMode tests do run -
 > against hand-written stand-ins for the Unity API rather than Unity itself
-> (`./Tools/compile_check.sh`). That found five defects, two of which were hard
-> compile errors. It says nothing about how any of this looks or performs, and
-> nothing about HDRP. See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+> (`./Tools/compile_check.sh`). Every HDRP call has separately been checked
+> against HDRP's published source (`./Tools/verify_hdrp_api.sh`). Between them
+> those two found six defects, three of which were hard compile errors. They
+> say nothing about how any of this looks, bakes or performs. See
+> [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
 
 ---
 
@@ -58,6 +60,10 @@ to sign into.
 # 3a. Or type-check and run the Unity-free tests without Unity at all
 #     (needs only dotnet-sdk-8.0 - no editor, no GPU):
 ./Tools/compile_check.sh
+
+# 3b. Check every HDRP call against HDRP's published source. This is the only
+#     check that says anything true about HDRP:
+./Tools/verify_hdrp_api.sh
 
 # 4. Regenerate the scale drawings and the preview renders after changing
 #    any dimension:
@@ -134,6 +140,7 @@ docs                       design documents, drawings, screenshots
 | [docs/RUNNING_IN_CLOUD.md](docs/RUNNING_IN_CLOUD.md) | Getting Unity running in a cloud session, and which acceptance criteria that would actually close |
 | [docs/BUILDING_FROM_A_PHONE.md](docs/BUILDING_FROM_A_PHONE.md) | Compiling, testing and building via GitHub Actions with no desktop machine |
 | [Tools/CompileCheck/README.md](Tools/CompileCheck/README.md) | Type-checking the project without Unity - what it proves, what it does not, and what it found |
+| `Tools/verify_hdrp_api.sh` | Checks every HDRP symbol against Unity's published HDRP source. The one check the compile harness cannot do for itself |
 | [TASKS.md](TASKS.md) | The milestone checklist and its real status |
 
 ## Scope

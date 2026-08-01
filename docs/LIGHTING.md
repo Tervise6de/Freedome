@@ -140,7 +140,7 @@ how eyes behave and avoid a lag when the player turns toward the window.
 | Tonemapping | Neutral | Not ACES. Neutral keeps midtone material detail readable, which is what the review pass needs to judge |
 | Colour adjustments | Exposure +0.15, contrast +4, saturation -2 | Near neutral |
 | Bloom | 0.06, scatter 0.6 | Just enough to sell the window |
-| Ambient occlusion | 0.65, radius 0.35, direct 0.25 | Contact darkening in the framing and under the shelves |
+| Ambient occlusion (`ScreenSpaceAmbientOcclusion`) | 0.65, radius 0.35, direct 0.25 | Contact darkening in the framing and under the shelves |
 | Contact shadows | On, length 0.15, opacity 0.85 | Small-scale grounding for props |
 | Micro shadowing | On, 0.45 | Normal-map detail catching the light |
 | Screen-space reflections | On | For the galvanised steel and the glass |

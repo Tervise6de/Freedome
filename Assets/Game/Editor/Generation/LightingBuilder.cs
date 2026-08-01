@@ -175,7 +175,12 @@ namespace Freedome.EditorTools.Generation
             contact.opacity.overrideState = true;
             contact.opacity.value = 0.85f;
 
-            AmbientOcclusion ao = profile.Add<AmbientOcclusion>(true);
+            // ScreenSpaceAmbientOcclusion, not AmbientOcclusion: the latter was
+            // renamed in 2022.2 and what is left under the old name is an empty
+            // [Obsolete] shell that does not derive from VolumeComponent, so
+            // profile.Add<AmbientOcclusion>() does not even satisfy the generic
+            // constraint. Verified against HDRP's published source.
+            ScreenSpaceAmbientOcclusion ao = profile.Add<ScreenSpaceAmbientOcclusion>(true);
             ao.intensity.overrideState = true;
             ao.intensity.value = 0.65f;
             ao.radius.overrideState = true;

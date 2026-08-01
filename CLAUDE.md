@@ -110,6 +110,9 @@ Builders live in `Assets/Game/Editor/Generation/`:
 python3 Tools/generate_diagrams.py        # after any dimension change
 ```
 
+`verify_hdrp_api.sh` needs only git and network, and is the only check that
+says anything true about HDRP.
+
 `compile_check.sh` needs only `dotnet-sdk-8.0` - no Unity, no GPU - and takes
 seconds. Run it before every commit. It compiles all four assemblies against
 hand-written Unity stand-ins and executes 31 of the 35 EditMode tests. It is
@@ -136,7 +139,9 @@ that check to get a build out.
 1. **HDRP APIs move between versions.** `LightingBuilder`, `ShedMaterialLibrary`
    and `ProjectConfigurator` are the most likely to fail to compile first. The
    compile check cannot help you here - its HDRP stubs assert what the API
-   should be, so they agree with the code by construction.
+   should be, so they agree with the code by construction. Use
+   `./Tools/verify_hdrp_api.sh` instead: it checks every HDRP symbol against
+   the real package source. Run it after touching any HDRP call site.
 2. **Legacy input is deliberate.** The Input System package is intentionally
    absent from the manifest. Adding it breaks the controller unless Active Input
    Handling is set to "Both".

@@ -37,7 +37,7 @@ Consequently:
   empty.
 - **No test has run.** The suites are written but unexecuted.
 
-What *was* verified, by three independent passes:
+What *was* verified, by four independent passes:
 
 - **Scale drawings** (`docs/diagrams/`, from `Tools/generate_diagrams.py`) -
   confirmed proportions, layout, circulation width and human-scale
@@ -48,22 +48,33 @@ What *was* verified, by three independent passes:
   placement read correctly, and caught three more real defects in the C#.
 - **Compile check** (`./Tools/compile_check.sh`) - all 9,000 lines type-checked
   with Roslyn against hand-written Unity stand-ins, plus 31 of the 35 EditMode
-  tests actually executed. Caught five more defects, two of them hard compile
+  tests actually executed. Caught five defects, two of them hard compile
   failures. See [Tools/CompileCheck/README.md](../Tools/CompileCheck/README.md).
+- **HDRP API check** (`./Tools/verify_hdrp_api.sh`) - every HDRP symbol the
+  project uses, checked against HDRP's published source instead of against the
+  stubs. Caught a sixth defect, also a hard compile failure. This is the one
+  thing the compile check is structurally incapable of doing for itself.
 
-None of the three is a Unity render or a Unity compile: no HDRP material, no
+None of the four is a Unity render or a Unity compile: no HDRP material, no
 baked light, no texture and no performance figure has been seen, and no Unity
 editor has resolved the HDRP package.
 
 Treat everything else as a careful first draft.
 
-### What the compile check changes, and what it does not
+### What the two static checks change, and what they do not
 
-It closes "does the C# parse, resolve and hold together" for everything except
-HDRP, and it turns the dimension table and `MeshBuilder` from asserted into
-tested. It does **not** touch issue 1 below: the stubs say what HDRP's API
-*should* look like, and a clean compile against them proves the project is
-self-consistent, not that HDRP 17.0.4 agrees. That still needs a real editor.
+The compile check closes "does the C# parse, resolve and hold together", and it
+turns the dimension table and `MeshBuilder` from asserted into tested. On its
+own it says nothing about HDRP - its stubs describe what HDRP's API *should*
+look like, so they agree with the project by construction.
+
+The HDRP check closes that gap from the other side, by reading the real package
+source. Between them, six defects were found that no amount of re-reading this
+project's own code would have surfaced.
+
+What neither touches is behaviour. Every call site now resolves against a real
+declaration; whether the room then looks like the design says it will is still
+entirely unknown, and needs an editor, a bake and a GPU.
 
 ### Getting it to run here instead
 
@@ -78,7 +89,8 @@ criteria that would and would not close.
 
 ```bash
 # 1. Open in Unity 6 with the Windows Build Support (Mono) module.
-# 2. Fix whatever compile errors appear. Expect some.
+# 2. Fix whatever compile errors appear. Fewer than there were - see above -
+#    but nothing has been through the real compiler, so do not assume zero.
 # 3. In the editor:
 #      Freedome > Configure Project Settings
 #      Freedome > Generate > Everything (textures, materials, scene)
@@ -97,16 +109,40 @@ Ordered by how likely they are to bite, with what to do about each.
 
 ### 1. HDRP API surface
 
-**Risk: high.** `LightingBuilder`, `ShedMaterialLibrary` and `ProjectConfigurator`
-call HDRP APIs that move between versions: `HDMaterial.ValidateMaterial`,
-`HDAdditionalLightData.SetIntensity`, `SetShadowResolution`, `EnableShadows`,
-volume override property names (`Exposure.limitMin`, `AmbientOcclusion.intensity`,
-`PhysicallyBasedSky.groundTint`, `VisualEnvironment.skyType`), and
-`HDRenderPipelineAsset` creation.
+**Risk: downgraded from high to low.** Every HDRP symbol the project uses has
+now been checked against HDRP's published source rather than against an
+assumption:
 
-Most of these are stable in HDRP 17, but this is the code most likely to fail to
-compile on first open. Every call site is small and isolated; expect to fix
-member names rather than rewrite logic.
+```bash
+./Tools/verify_hdrp_api.sh
+```
+
+That clones Unity's public `Unity-Technologies/Graphics` mirror and greps the
+real package. All 40-odd symbols resolve - `HDMaterial.ValidateMaterial`, the
+whole `HDAdditionalLightData` surface, every volume override property name,
+every enum member.
+
+It found one hard compile error, now fixed: **`AmbientOcclusion` was renamed to
+`ScreenSpaceAmbientOcclusion` in 2022.2**, and what is left under the old name
+is an empty `[Obsolete]` shell that does not derive from `VolumeComponent`. So
+`profile.Add<AmbientOcclusion>(true)` failed the generic constraint outright,
+and all three property accesses under it failed too.
+
+Two caveats keep this from being closed entirely:
+
+- The public mirror's tags stop at HDRP 10, so the check runs against the tip
+  of `master` - 17.6.0 at the time of writing, against the pinned 17.0.4. Same
+  major, so the surface is nearly identical, but the signal is asymmetric: a
+  symbol *absent* in 17.6 is almost certainly broken in 17.0.4, while a symbol
+  *present* in 17.6 could in principle have been added after 17.0.4.
+- Three members are deprecated-but-legal, and the project uses them knowingly:
+  `SetIntensity` (`#from(2023.3)`), `shapeRadius` (`(UnityUpgradable)`) and
+  `innerSpotPercent` (`#from(6000.3)`, so not yet deprecated in 17.0.4 at all).
+  All three are warnings, not errors. Worth migrating eventually; not worth
+  churning the light rig before anything has ever rendered.
+
+What is still unverified is behaviour: that these calls do what the lighting
+design assumes once HDRP actually executes them.
 
 ### 2. Assembly definition references
 
@@ -223,12 +259,14 @@ Recorded because the method that caught them is worth repeating.
 | `[MenuItem("...", priority = N)]` on all eight menu entries. Unity's `priority` is an internal field, so a named attribute argument cannot bind to it - this is a hard compile error, and it took out every entry point to the project's tooling | Compile check | Changed to the positional form, `[MenuItem("...", false, N)]` |
 | `Environment.GetCommandLineArgs()` in `WindowsBuild.PerformBuild` resolved to the `Freedome.Environment` namespace, not `System.Environment`, because the file sits inside `Freedome.EditorTools.Build`. Another hard compile error, in the exact method the GitHub Actions workflow names as its `buildMethod` | Compile check | Fully qualified as `System.Environment` |
 | `PlayerLook` stopped writing the camera pivot's rotation while input was disabled, but `HeadBob` multiplies its roll into that same value every frame in `LateUpdate`. With the pause menu open the roll had nothing resetting it, so the camera rotated about 21 degrees a second and snapped back on resume | Compile check - the dead field `HeadBob._baseLocalPosition` was the thread to pull | `PlayerLook` now writes the pivot rotation unconditionally; that channel is its to own absolutely |
+| `profile.Add<AmbientOcclusion>(true)` in `LightingBuilder`. HDRP renamed the type to `ScreenSpaceAmbientOcclusion` in 2022.2 and left an empty `[Obsolete]` shell behind that is not a `VolumeComponent`, so this failed the generic constraint and took the three property accesses under it with it | `Tools/verify_hdrp_api.sh`, reading HDRP's published source | Renamed to `ScreenSpaceAmbientOcclusion`. The compile-check stub now reproduces HDRP's shape exactly, so the harness catches it too |
 | Three grain tests passed with `MeshBuilder.LongestAxis` deliberately broken. They asserted against `UvBounds`, which unions every face of a box - and a box has faces in all orientations, so the V extent is the piece's longest dimension however the grain runs | Mutation-testing the compile check | Added `AssertVRunsAlong`, which checks the V direction on one named face. The mutation is now caught |
 
-Drawing the room to scale, rasterising it, and finally type-checking it caught
-eleven faults that no amount of reading the code would have. That is the
-argument for keeping `Tools/generate_diagrams.py`, `Tools/preview_render.py`
-and `Tools/compile_check.sh` working.
+Drawing the room to scale, rasterising it, type-checking it and then reading
+the real HDRP source caught twelve faults that no amount of re-reading this
+project's own code would have. That is the
+argument for keeping `Tools/generate_diagrams.py`, `Tools/preview_render.py`,
+`Tools/compile_check.sh` and `Tools/verify_hdrp_api.sh` working.
 
 The compile check is also the one of the three that a contributor should run
 before every commit: it takes seconds and it is the only one that would have

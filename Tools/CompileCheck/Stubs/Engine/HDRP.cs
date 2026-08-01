@@ -132,12 +132,23 @@ namespace UnityEngine.Rendering.HighDefinition
         public MinFloatParameter minDistance = new MinFloatParameter(0f, 0f);
     }
 
-    public class AmbientOcclusion : VolumeComponent
+    public class ScreenSpaceAmbientOcclusion : VolumeComponent
     {
         public ClampedFloatParameter intensity = new ClampedFloatParameter(0f, 0f, 4f);
         public ClampedFloatParameter directLightingStrength = new ClampedFloatParameter(0f, 0f, 1f);
         public ClampedFloatParameter radius = new ClampedFloatParameter(0f, 0.25f, 5f);
         public BoolParameter rayTracing = new BoolParameter(false);
+    }
+
+    /// <summary>
+    /// Reproduced exactly as HDRP declares it: renamed in 2022.2, and what is
+    /// left is an empty shell that is NOT a VolumeComponent. Keeping it this
+    /// shape is the point - it is what makes profile.Add&lt;AmbientOcclusion&gt;()
+    /// fail here, as it would in Unity.
+    /// </summary>
+    [Obsolete("AmbientOcclusion has been renamed. Use ScreenSpaceAmbientOcclusion instead")]
+    public sealed class AmbientOcclusion
+    {
     }
 
     public class ScreenSpaceReflection : VolumeComponent

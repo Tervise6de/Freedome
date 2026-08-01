@@ -18,7 +18,8 @@ code. That made "does the C# even build" the largest unanswered question in the
 repository, and it was not going to be answered until somebody ran a Unity
 editor. This answers most of it without one.
 
-It found five defects, listed at the bottom.
+It found five defects directly, and its stubs were corrected by a sixth
+that `Tools/verify_hdrp_api.sh` found. All six are listed at the bottom.
 
 ## What it is
 
@@ -71,10 +72,17 @@ Those two are what let 31 tests actually execute rather than merely compile.
 **Does not prove:**
 
 - **That HDRP 17.0.4 declares the members `Stubs/Engine/HDRP.cs` says it does.**
-  This is the weakest part of the harness and the largest remaining risk.
-  A clean compile here means the project's use of HDRP is internally consistent
-  and matches HDRP as documented — not that the package agrees.
-  `docs/KNOWN_ISSUES.md` #1 stays open regardless of what this says.
+  This is structurally impossible for this harness: the stubs describe what
+  HDRP's API should be, so they agree with the project by construction. A clean
+  compile here means the project's use of HDRP is internally consistent, not
+  that the package agrees.
+
+  `./Tools/verify_hdrp_api.sh` closes that gap from the other side, by reading
+  HDRP's published source. It found a hard compile error this harness could
+  never have seen — `AmbientOcclusion` is a renamed, empty `[Obsolete]` shell
+  that is not even a `VolumeComponent`. The stub in `HDRP.cs` now reproduces
+  that shape exactly, so the harness catches it too, but only because the other
+  tool found it first. Run both.
 - That anything renders, bakes, performs or looks right
 - That the scene generates. `SceneAndProjectTests` is excluded from the run: it
   asks `AssetDatabase` about a scene that only exists once Unity has made one.
@@ -107,7 +115,8 @@ destroyed. They now check the V direction on one named face, via
 | 3 | `PlayerLook` skipped writing the camera pivot's rotation while input was disabled, and `HeadBob` multiplies its roll into that same value every frame in `LateUpdate` | Camera rolls continuously while the pause menu is open, then snaps back |
 | 4 | `HeadBob._baseLocalPosition` declared and never used | Dead code — but it is the fingerprint of #3 |
 | 5 | Three grain tests passed with the grain logic destroyed | A test that cannot fail is worse than no test |
+| 6 | `profile.Add<AmbientOcclusion>(true)` — the type was renamed to `ScreenSpaceAmbientOcclusion` in 2022.2, and the shell left behind is not a `VolumeComponent` | **Would not compile.** Found by `verify_hdrp_api.sh`, not by this harness |
 
-Defects 1 and 2 are the ones worth the exercise on their own: both are hard
-compile failures, and between them they take out every menu command and the
-headless build entry point.
+Defects 1, 2 and 6 are the ones worth the exercise on their own: all three are
+hard compile failures, and between them they take out every menu command, the
+headless build entry point, and the volume stack.
