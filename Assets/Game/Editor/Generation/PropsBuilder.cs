@@ -95,8 +95,10 @@ namespace Freedome.EditorTools.Generation
             }
 
             // --- top shelf: a sack, two tins and a coil of rope -----------------
+            // Card, not Fabric: this is a paper sack of feed or fertiliser, and on
+            // the tarpaulin material it read as a folded blue groundsheet.
             PropLibrary.Sack(mb, new Vector3(front - 0.02f, y[3], -0.78f),
-                             new Vector3(0.230f, 0.180f, 0.400f), Fabric, -6f);
+                             new Vector3(0.230f, 0.180f, 0.400f), Card, -6f);
 
             PropLibrary.PaintTin(mb, new Vector3(back + 0.05f, y[3], -0.20f), 0.175f, 0.072f, Painted, Metal, 12f);
             PropLibrary.PaintTin(mb, new Vector3(back + 0.08f, y[3], -0.04f), 0.130f, 0.060f, Painted, Metal, 55f);

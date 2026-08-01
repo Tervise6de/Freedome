@@ -51,8 +51,10 @@ to sign into.
 # 3. Run the tests:
 ./Tools/run_tests.sh all
 
-# 4. Regenerate the scale drawings after changing any dimension:
+# 4. Regenerate the scale drawings and the preview renders after changing
+#    any dimension:
 python3 Tools/generate_diagrams.py
+python3 Tools/preview_render.py
 ```
 
 The build lands in `Builds/Windows/ShedRoomDemo/ShedRoomDemo.exe`.
@@ -119,6 +121,7 @@ docs                       design documents, drawings, screenshots
 | [docs/DECISIONS.md](docs/DECISIONS.md) | The choices worth arguing with, and why they went that way |
 | [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | What is unverified, what is a placeholder, what is likely to break first |
 | [docs/BUILD_REPORT.md](docs/BUILD_REPORT.md) | Build path, procedure and results |
+| [docs/previews/README.md](docs/previews/README.md) | Software-rasterised preview renders - what they are, and what they are not |
 | [TASKS.md](TASKS.md) | The milestone checklist and its real status |
 
 ## Scope

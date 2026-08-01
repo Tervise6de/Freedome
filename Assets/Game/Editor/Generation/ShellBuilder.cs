@@ -344,7 +344,10 @@ namespace Freedome.EditorTools.Generation
                       new Vector3(Dim.StudWidth, apex - baseY, Dim.StudDepth), 0, 0.0025f);
 
             // The prism runs the full roof width, past the wall face, so the top
-            // corners of the gable meet the rafter line with no daylight gap.
+            // corners of the gable meet the roof with no daylight gap. It is taken
+            // all the way up to the underside of the corrugation troughs rather than
+            // to the rafter line: the rafters and purlins sit ~146 mm above that
+            // line, and stopping short leaves an open slot the length of the rake.
             AddGablePrism(mb, frame.Length, baseY, Dim.StudDepth, Dim.BoardThickness, 1, Dim.WallThickness);
             AddGablePrism(mb, frame.Length, baseY, Dim.StudDepth + Dim.BoardThickness,
                           Dim.CladdingThickness, 2, Dim.WallThickness);
@@ -357,8 +360,8 @@ namespace Freedome.EditorTools.Generation
             float half = length * 0.5f;
             float x0 = -extend;
             float x1 = length + extend;
-            float apexY = Dim.RoofUndersideAt(0f);
-            float edgeY = Dim.RoofUndersideAt(half + extend);
+            float apexY = RoofBuilder.TroughY(0f);
+            float edgeY = RoofBuilder.TroughY(half + extend);
 
             float z0 = zOffset;
             float z1 = zOffset + thickness;

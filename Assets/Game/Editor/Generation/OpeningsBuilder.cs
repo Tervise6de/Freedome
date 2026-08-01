@@ -289,9 +289,14 @@ namespace Freedome.EditorTools.Generation
             }
 
             // Interior sill board. A shed window always ends up as a shelf.
+            // It sits ON the framing sill trimmer rather than flush with it: the
+            // trimmer's top face is also at y = sill, and two coplanar faces
+            // z-fight into a speckled mess right where the player leans in.
             const float SillDepth = 0.165f;
-            mb.AddBox(new Vector3(0f, sill - 0.0125f, (SillDepth * 0.5f) - Dim.WindowSillProjection),
-                      new Vector3(Dim.WindowWidth + 0.100f, 0.025f, SillDepth), 0, 0.004f);
+            const float SillBoardThickness = 0.025f;
+            mb.AddBox(new Vector3(0f, sill + (SillBoardThickness * 0.5f),
+                                  (SillDepth * 0.5f) - Dim.WindowSillProjection),
+                      new Vector3(Dim.WindowWidth + 0.100f, SillBoardThickness, SillDepth), 0, 0.004f);
 
             // Exterior architrave and a galvanised head flashing.
             foreach (int s in new[] { -1, 1 })

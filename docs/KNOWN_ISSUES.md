@@ -36,10 +36,19 @@ Consequently:
   empty.
 - **No test has run.** The suites are written but unexecuted.
 
-What *was* verified: the scale drawings in `docs/diagrams/` were generated and
-rendered from the same dimension table the scene generator uses, which confirms
-the room's proportions, the layout, the circulation width and the human-scale
-relationships. That review already caught two real layout faults (below).
+What *was* verified, by two independent passes that read the same dimension
+table the scene generator reads:
+
+- **Scale drawings** (`docs/diagrams/`, from `Tools/generate_diagrams.py`) -
+  confirmed proportions, layout, circulation width and human-scale
+  relationships, and caught three placement faults.
+- **Preview renders** (`docs/previews/`, from `Tools/preview_render.py`) - a
+  software rasterisation of the reconstructed room from the eight review
+  viewpoints. Confirmed that the framing, roof structure, openings and prop
+  placement read correctly, and caught three more real defects in the C#.
+
+Both are recorded below. Neither is a Unity render: no HDRP material, no baked
+light, no texture and no performance figure has been seen.
 
 Treat everything else as a careful first draft that compiles in the author's head.
 
@@ -103,14 +112,26 @@ as a lovely row of highlights or as an obvious seam. Tunable via
 the interior has direct light and sky ambient only and will look flat and dark in
 the corners. Do not judge the art direction before baking.
 
-### 6. Geometry intersections at the eaves
+### 6. The utility wall is the darkest surface in the room
+
+**Risk: medium, visual.** The preview render of the electrical area
+(`docs/previews/05_electrical_utility_area.png`) shows the far gable end
+noticeably darker than anywhere else - it is 6 m from the window and its own
+vent is off to one side. The preview has no bounce light, so a bake will improve
+it, but this is the wall the acceptance criteria most plausibly fail on
+("lighting readable throughout", "dark areas retain visible detail"). Check it
+first after baking. If it is still too dark, the honest fixes in order are:
+widen the vent's contribution, raise the ceiling lamp's output, or move the
+lamp toward the utility end - not a fill light with no fixture.
+
+### 7. Geometry intersections at the eaves
 
 **Risk: medium, visual.** The tapered eaves blocking is generated per rafter bay
 and butts against rafters whose position is computed independently. Small
 overlaps or gaps at those junctions are plausible. Screenshot 6 (ceiling and roof
 structure) is the one that would show it.
 
-### 7. Wood grain direction
+### 8. Wood grain direction
 
 **Risk: low, visual.** UVs are planar-projected against each face's dominant
 axis, so grain direction follows geometry rather than following each board's
@@ -118,30 +139,30 @@ length. On a stud seen face-on it is right; on some faces the grain will run
 across the board instead of along it. Fixing it properly means per-object UV axis
 control in `MeshBuilder`. Probably not noticeable at 1 m; check screenshot 4.
 
-### 8. Prop contact with the floor
+### 9. Prop contact with the floor
 
 **Risk: low.** Props are placed by computed base points, not dropped onto
 collision. Anything whose local origin is not exactly at its base will float or
 sink by a few millimetres. Screenshot 7 exists specifically to catch this.
 
-### 9. `ProjectVersion.txt`
+### 10. `ProjectVersion.txt`
 
 **Risk: low, cosmetic.** `6000.0.58f1` was written without a Unity install to
 confirm the patch number. Any 6000.0.x opens the project with an upgrade prompt.
 
-### 10. Legacy input assumption
+### 11. Legacy input assumption
 
 **Risk: low.** The controller uses the legacy `Input` class. The new Input System
 package is deliberately absent from the manifest so the old input handling stays
 active. If anyone adds `com.unity.inputsystem`, set Active Input Handling to
 "Both" or the controller stops responding.
 
-### 11. Pause menu at non-16:9 aspect ratios
+### 12. Pause menu at non-16:9 aspect ratios
 
 **Risk: low.** The canvas scales with a 1920 x 1080 reference at match 0.5.
 Untested at ultrawide or 4:3.
 
-### 12. Screenshot capture without a bake
+### 13. Screenshot capture without a bake
 
 **Risk: low.** `ScreenshotCapture` renders through a temporary camera. If it is
 run before lighting is baked the shots will show the unbaked room, which is not
@@ -178,10 +199,14 @@ Recorded because the method that caught them is worth repeating.
 | Ceiling light hung between collar ties | Design review | Moved from z = -0.20 to z = 0.0, onto the tie |
 | Door rough height left no top clearance | Arithmetic check | Rough height changed to leaf + jamb + 10 mm |
 | Gable prism left triangular gaps at the top corners | Geometry review | Extended past the wall face by the full wall thickness |
+| Gable sheathing stopped at the rafter underside, leaving an open slot the full length of both gable rakes | Preview render 03 - sky visible through the roof junction | Taken up to `RoofBuilder.TroughY` instead, matching the eaves blocking |
+| Window sill board's top face was coplanar with the framing sill trimmer | Preview render 08 - z-fighting speckle right where the player leans in | Sill board now sits on the trimmer rather than flush with it |
+| Top-shelf sack used the tarpaulin material, so a bag of feed read as a folded blue groundsheet | Preview render 02 | Switched to the card material - a paper sack |
 
-Drawing the room to scale from the same numbers the generator uses caught three
-placement faults that no amount of reading the code would have. That is the
-argument for keeping `Tools/generate_diagrams.py` current.
+Drawing the room to scale, and then rasterising it, from the same numbers the
+generator uses caught six faults that no amount of reading the code would have.
+That is the argument for keeping `Tools/generate_diagrams.py` and
+`Tools/preview_render.py` working.
 
 ---
 
