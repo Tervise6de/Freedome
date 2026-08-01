@@ -52,6 +52,15 @@ light, no texture and no performance figure has been seen.
 
 Treat everything else as a careful first draft that compiles in the author's head.
 
+### Getting it to run here instead
+
+The blocker is the environment's network policy, which is changeable, plus a
+GPU, which is not - cloud sessions have 4 vCPUs, 16 GB RAM and 30 GB of disk,
+and no hardware option exists. `Tools/bootstrap_unity.sh` installs Unity
+headlessly and runs the whole pipeline once the domains are allowed. See
+[RUNNING_IN_CLOUD.md](RUNNING_IN_CLOUD.md) for the exact steps and for which
+criteria that would and would not close.
+
 ### What to do first
 
 ```bash

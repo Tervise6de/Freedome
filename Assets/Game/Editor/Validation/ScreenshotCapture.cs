@@ -85,6 +85,36 @@ namespace Freedome.EditorTools.Validation
                 $"Captured {count} screenshots into {OutputFolder}.", "OK");
         }
 
+        /// <summary>
+        /// Batch entry point. Unity's -executeMethod wants a static void with no
+        /// arguments, and it needs a non-zero exit when nothing was captured -
+        /// otherwise a headless run that rendered nothing reports success.
+        /// </summary>
+        public static void CaptureAllFromBatch()
+        {
+            int captured = 0;
+            try
+            {
+                captured = CaptureAll();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[Freedome] Screenshot capture threw: {e}");
+            }
+
+            if (captured < Viewpoints.Length)
+            {
+                Debug.LogError($"[Freedome] Captured {captured} of {Viewpoints.Length} views. " +
+                               "On a machine with no GPU this usually means no graphics device " +
+                               "was available - check that a software Vulkan driver is installed " +
+                               "and that the editor was not run with -nographics.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            EditorApplication.Exit(0);
+        }
+
         public static int CaptureAll()
         {
             if (EditorSceneManager.GetActiveScene().path != Generation.ShedSceneGenerator.ScenePath)

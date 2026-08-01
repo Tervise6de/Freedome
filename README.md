@@ -123,6 +123,7 @@ docs                       design documents, drawings, screenshots
 | [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | What is unverified, what is a placeholder, what is likely to break first |
 | [docs/BUILD_REPORT.md](docs/BUILD_REPORT.md) | Build path, procedure and results |
 | [docs/previews/README.md](docs/previews/README.md) | Software-rasterised preview renders - what they are, and what they are not |
+| [docs/RUNNING_IN_CLOUD.md](docs/RUNNING_IN_CLOUD.md) | Getting Unity running in a cloud session, and which acceptance criteria that would actually close |
 | [TASKS.md](TASKS.md) | The milestone checklist and its real status |
 
 ## Scope

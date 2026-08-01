@@ -68,6 +68,49 @@ namespace Freedome.EditorTools.Build
             EditorApplication.Exit(0);
         }
 
+        /// <summary>
+        /// Batch entry point that bakes lighting and nothing else.
+        ///
+        /// Separate from PerformBuild because the bake is the slowest step by a
+        /// wide margin and is worth being able to run, fail and retry on its own -
+        /// particularly on a machine with no GPU, where it is the only part of the
+        /// pipeline that is merely slow rather than unreliable.
+        /// </summary>
+        public static void BakeOnly()
+        {
+            if (!File.Exists(Generation.ShedSceneGenerator.ScenePath))
+            {
+                Debug.LogError($"[Freedome] No scene at {Generation.ShedSceneGenerator.ScenePath}. " +
+                               "Generate it before baking.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                Generation.ShedSceneGenerator.ScenePath,
+                UnityEditor.SceneManagement.OpenSceneMode.Single);
+
+            Debug.Log("[Freedome] Baking lighting. On the CPU lightmapper this takes a while.");
+            DateTime started = DateTime.UtcNow;
+
+            bool ok = Lightmapping.Bake();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            AssetDatabase.SaveAssets();
+
+            double minutes = (DateTime.UtcNow - started).TotalMinutes;
+            if (ok)
+            {
+                Debug.Log($"[Freedome] Bake finished in {minutes:0.0} minutes.");
+                EditorApplication.Exit(0);
+            }
+            else
+            {
+                Debug.LogError($"[Freedome] Bake failed after {minutes:0.0} minutes.");
+                EditorApplication.Exit(1);
+            }
+        }
+
         public static BuildReport Run(bool regenerate, bool bake, bool development)
         {
             ProjectConfigurator.Configure();

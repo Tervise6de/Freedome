@@ -244,8 +244,38 @@ namespace Freedome.EditorTools.Generation
         public static void GenerateEverything()
         {
             ShedTextureGenerator.GenerateAll();
-            ShedMaterialLibrary.GenerateFromMenu();
+            // CreateAll rather than the menu wrapper: the wrapper opens a dialog,
+            // which a headless run cannot answer.
+            ShedMaterialLibrary.CreateAll();
             Generate();
+        }
+
+        /// <summary>
+        /// Batch entry point. Same work, but it reports failure through the exit
+        /// code so a scripted run stops instead of carrying on to build a scene
+        /// that was never generated.
+        /// </summary>
+        public static void GenerateEverythingBatch()
+        {
+            try
+            {
+                GenerateEverything();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[Freedome] Generation failed: {e}");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            if (!File.Exists(ScenePath))
+            {
+                Debug.LogError($"[Freedome] Generation reported success but {ScenePath} is absent.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            EditorApplication.Exit(0);
         }
     }
 }
