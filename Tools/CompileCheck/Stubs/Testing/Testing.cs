@@ -113,7 +113,9 @@ namespace NUnit.Framework
         public static void AreNotEqual(object expected, object actual) { }
         public static void AreNotEqual(object expected, object actual, string message, params object[] args) { }
         public static void AreSame(object expected, object actual) { }
+        public static void AreSame(object expected, object actual, string message, params object[] args) { }
         public static void AreNotSame(object expected, object actual) { }
+        public static void AreNotSame(object expected, object actual, string message, params object[] args) { }
 
         public static void IsTrue(bool condition) { }
         public static void IsTrue(bool condition, string message, params object[] args) { }

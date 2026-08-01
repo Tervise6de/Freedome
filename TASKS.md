@@ -222,3 +222,10 @@ original "no interactivity" boundary. See DECISIONS.md.
 - [x] Bench drawers slide, with a tin of screws and a folding rule inside
 - [x] Six-slot inventory, number keys to hold, G to put down
 - [x] Ridge cap closed - it had a 6.5 mm gap the full length of the roof
+
+- [x] Mutation-tested InteractionTests; two were vacuous and are now real
+- [x] Door swept arc checked - it was opening into the room
+- [x] Window casement built (there was none) and hinged
+- [x] Carryables and the ridge fix mirrored into the preview renders
+- [x] Entrance apron so the open door is walkable, with probes over it
+- [x] PlayMode interaction tests written - 7 of them, none ever executed
