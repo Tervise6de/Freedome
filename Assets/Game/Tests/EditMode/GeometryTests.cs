@@ -326,10 +326,16 @@ namespace Freedome.Tests.EditMode
                 $"the ridge cap stops {innerEdgeX * 1000f:0.0} mm short of the centreline, " +
                 "so there is a slot straight through the roof");
 
-            // And it has to lap far enough to survive the mesh being chamfered.
-            Assert.Less(innerEdgeX, -0.004f,
-                $"the cap wings only overlap {-innerEdgeX * 2000f:0.0} mm, which is inside " +
-                "the chamfer and may still show light");
+            // Crossing zero is necessary but not sufficient. The wings are 6 mm
+            // boxes in two planes that meet at the apex, so they only overlap in
+            // height within a narrow band either side of it. Stopping inside that
+            // band leaves the chamfered edges as the only thing meeting, and a
+            // hairline of sky still shows - which is exactly what the preview
+            // render caught after the first attempt at this fix.
+            float sealBand = RoofBuilder.RidgeCapSealBandHalfWidth;
+            Assert.Less(innerEdgeX, -sealBand,
+                $"the wings cross by only {-innerEdgeX * 1000f:0.0} mm but need to clear " +
+                $"the {sealBand * 1000f:0.0} mm seal band to overlap solidly");
         }
 
         [Test]

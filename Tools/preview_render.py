@@ -403,8 +403,11 @@ def build_roof(m):
         n = np.array([side * math.sin(PITCH), math.cos(PITCH), 0.0])
         along = np.array([side * math.cos(PITCH), -math.sin(PITCH), 0.0])
         start = np.array([side * ridge_off, roof_underside(ridge_off), 0.0])
-        c = start + along * 0.14 + n * (RAFTER_D + PURLIN_T + 0.016 + 0.004)
-        m.box(tuple(c), (0.30, 0.006, ROOF_HL * 2), GALV, r)
+        # Mirrors RoofBuilder.CapCentreOffset / CapWidth. At the original 0.14 each
+        # wing stopped 3.2 mm short of the centreline and the two never met, which
+        # is the bright line down the apex in earlier renders of this view.
+        c = start + along * 0.11 + n * (RAFTER_D + PURLIN_T + 0.016 + 0.004)
+        m.box(tuple(c), (0.34, 0.006, ROOF_HL * 2), GALV, r)
 
     # fascia and barge boards
     eave_y = roof_underside(EAVE_X)
@@ -647,6 +650,32 @@ def bucket(m, base, h, r, col):
 def tin(m, base, h, r, col):
     m.cyl((base[0], base[1] + h / 2, base[2]), r, r, h, 12, col)
     m.cyl((base[0], base[1] + h - 0.004, base[2]), r + 0.004, r + 0.004, 0.01, 12, ZINC)
+
+
+def build_carryables(m):
+    """The five loose objects the player can pick up.
+
+    Mirrors CarryablesBuilder.Placements. They are ordinary shed objects in
+    ordinary places - the preview has to show them or it is a picture of a
+    different room than the one the generator builds.
+    """
+    # Paint tin, at the foot of the storage shelving.
+    tin(m, (-1.62, 0.0, 0.35), 0.175, 0.088, GREEN)
+
+    # Toolbox, beside the bench leg.
+    m.box((1.34, 0.105, -0.95), (0.42, 0.21, 0.20), RED, rot_euler(0, 14, 0))
+    m.box((1.34, 0.225, -0.95), (0.14, 0.03, 0.03), ZINC, rot_euler(0, 14, 0))
+
+    # Jar of fixings, on the bench top.
+    tin(m, (1.70, 0.90, 0.62), 0.115, 0.042, ZINC)
+
+    # Watering can, in the storage corner.
+    m.cyl((-1.55, 0.11, 1.45), 0.105, 0.115, 0.22, 12, GALV)
+    m.cyl((-1.55 + 0.16, 0.15, 1.45), 0.022, 0.016, 0.24, 8, GALV,
+          rot_euler(0, 0, 62))
+
+    # Timber offcut, just inside the door.
+    m.box((-0.30, 0.0225, -2.05), (0.400, 0.045, 0.090), PINE, rot_euler(0, 22, 0))
 
 
 def build_shelf_contents(m):
@@ -990,6 +1019,7 @@ def build_scene() -> Mesh:
     build_utility(m)
     build_entrance_fittings(m)
     build_props(m)
+    build_carryables(m)
     build_lights_geometry(m)
     build_exterior(m)
     return m

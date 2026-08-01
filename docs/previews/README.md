@@ -97,3 +97,18 @@ Five real defects, four of them in the Unity source rather than in the preview:
 
 That is the argument for keeping this script working. It costs 25 seconds to
 render all eight views and it has already paid for itself twice.
+
+
+## Kept in step with the scene
+
+The reconstruction in `Tools/preview_render.py` is a second implementation of
+the same room, not a render of the real one, so it drifts unless it is kept up
+deliberately. Two things it now mirrors that it did not before:
+
+- the five carryable objects, from `CarryablesBuilder.Placements`
+- the ridge cap offset and width, from `RoofBuilder.CapCentreOffset` / `CapWidth`
+
+That second one earned its keep immediately. The bright line down the apex in
+earlier copies of `06_ceiling_and_roof_structure.png` was not a rendering
+artefact - it was 6.5 mm of real sky through an unclosed ridge, and the render
+is what proved the first attempt at closing it had not worked.

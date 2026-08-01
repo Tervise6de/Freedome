@@ -24,22 +24,36 @@ namespace Freedome.EditorTools.Generation
         public const float CorrugationAmplitude = 0.016f;
 
         /// <summary>Ridge cap wing, measured along the slope.</summary>
-        public const float CapWidth = 0.300f;
+        public const float CapWidth = 0.340f;
 
         /// <summary>
         /// Distance down the slope from the ridge board to the centre of the cap
         /// wing. Must be small enough that the wing's inner edge crosses the
         /// centreline; <c>RidgeCapClosesTheApex</c> is what keeps it honest.
         /// </summary>
-        public const float CapCentreOffset = 0.130f;
+        public const float CapCentreOffset = 0.110f;
 
         /// <summary>
         /// Signed x of the cap wing's inner edge, for the +x side. Negative means it
         /// has crossed the apex and the two wings overlap, which is what closing the
         /// ridge requires. Shared with the tests rather than recomputed there.
+        ///
+        /// Crossing the centreline is necessary but not sufficient. The wings are
+        /// 6 mm boxes lying in two planes that meet at the apex, so they only
+        /// overlap in height within +/-7.4 mm of it - thickness / (2 tan(pitch)).
+        /// An earlier fix crossed by exactly 6 mm, which put the chamfered edges
+        /// inside that band and still showed a hairline of sky in the preview.
+        /// RidgeCapSealBandHalfWidth is what the test compares against.
         /// </summary>
         public static float RidgeCapInnerEdgeX =>
             RidgeOffset + ((CapCentreOffset - (CapWidth * 0.5f)) * CosTheta);
+
+        /// <summary>
+        /// How far either side of the apex the two wings actually overlap in height.
+        /// The wings must reach comfortably past this, not merely past zero.
+        /// </summary>
+        public static float RidgeCapSealBandHalfWidth =>
+            0.006f / (2f * Mathf.Tan(Theta));
         public const float BargeThickness = 0.019f;
         public const float FasciaHeight = 0.140f;
 
