@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>UnityEngine</AssemblyName>
+    <RootNamespace>UnityEngine</RootNamespace>
+    <!-- The stubs are deliberately signature-only, so every method body is a
+         throw or a default. Silencing the noise that provokes keeps the real
+         diagnostics readable. -->
+    <NoWarn>$(NoWarn);CS1591;CS0649;CS0067;CS0414;CS0169</NoWarn>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+</Project>

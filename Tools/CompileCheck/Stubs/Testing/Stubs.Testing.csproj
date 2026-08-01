@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>nunit.framework</AssemblyName>
+    <RootNamespace>NUnit.Framework</RootNamespace>
+    <NoWarn>$(NoWarn);CS1591;CS0649;CS0067;CS0414;CS0169</NoWarn>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Engine/Stubs.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

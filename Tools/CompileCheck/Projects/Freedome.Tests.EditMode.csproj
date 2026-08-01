@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Mirrors Assets/Game/Tests/EditMode/Freedome.Tests.EditMode.asmdef. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- The project targets Unity, which has its own analyzer set; running the
+         SDK default analyzers here would bury real errors in style noise. -->
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <!-- CS0649 is unavoidable noise here: Unity's serializer assigns
+         [SerializeField] fields from the inspector, which Roslyn cannot see.
+         Everything else stays on, and warnings are errors so nothing is
+         quietly ignored. -->
+    <NoWarn>$(NoWarn);CS1591;CS0649</NoWarn>
+    <AssemblyName>Freedome.Tests.EditMode</AssemblyName>
+    <RootNamespace>Freedome.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Game/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Stubs/Engine/Stubs.Engine.csproj" />
+    <ProjectReference Include="../Stubs/Editor/Stubs.Editor.csproj" />
+    <ProjectReference Include="../Stubs/Testing/Stubs.Testing.csproj" />
+    <ProjectReference Include="Freedome.Runtime.csproj" />
+    <ProjectReference Include="Freedome.Editor.csproj" />
+  </ItemGroup>
+
+</Project>

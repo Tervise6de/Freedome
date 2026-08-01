@@ -56,7 +56,7 @@ namespace Freedome.EditorTools.Generation
             public int Resolution = ShedTextureGenerator.Resolution;
         }
 
-        [MenuItem("Freedome/Generate/Textures", priority = 10)]
+        [MenuItem("Freedome/Generate/Textures", false, 10)]
         public static void GenerateFromMenu()
         {
             GenerateAll();

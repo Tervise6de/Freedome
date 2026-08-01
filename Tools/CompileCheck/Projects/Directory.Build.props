@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    All five projects live in this one directory, so without this they would
+    share obj/ and bin/ and clobber each other's restore assets. Imported early
+    enough to affect restore, which setting it inside each csproj is not.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+
+</Project>

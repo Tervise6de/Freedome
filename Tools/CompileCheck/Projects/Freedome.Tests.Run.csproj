@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Executes the subset of the EditMode suite that does not need a live Unity.
+
+    ShedDimensionsTests is pure arithmetic over the dimension table, and
+    GeometryTests drives MeshBuilder, which is pure vector maths once Vector3,
+    Quaternion, Matrix4x4 and Mathf behave properly - which they do here, see
+    Stubs/Engine/Math.cs.
+
+    SceneAndProjectTests is deliberately excluded: it asks AssetDatabase and
+    EditorBuildSettings about a scene that only exists once Unity has generated
+    it, so running it here would prove nothing.
+
+    Real NUnit is used rather than the stub, so assertion semantics, tolerances
+    and failure messages are the genuine article.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>Freedome.Tests.Run</AssemblyName>
+    <RootNamespace>Freedome.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CS1591;CS0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Game/Tests/EditMode/ShedDimensionsTests.cs" />
+    <Compile Include="../../../Assets/Game/Tests/EditMode/GeometryTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Stubs/Engine/Stubs.Engine.csproj" />
+    <ProjectReference Include="../Stubs/Editor/Stubs.Editor.csproj" />
+    <ProjectReference Include="Freedome.Runtime.csproj" />
+    <ProjectReference Include="Freedome.Editor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+  </ItemGroup>
+
+</Project>

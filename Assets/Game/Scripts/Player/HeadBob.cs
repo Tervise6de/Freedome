@@ -24,7 +24,6 @@ namespace Freedome.Player
         private FirstPersonController _controller;
         private float _phase;
         private float _weight;
-        private Vector3 _baseLocalPosition;
 
         private void Awake()
         {
@@ -72,6 +71,11 @@ namespace Freedome.Player
             float horizontal = Mathf.Sin(_phase) * horizontalAmplitude * amount;
             float roll = Mathf.Sin(_phase) * rollAmplitude * amount;
 
+            // Both of these compose onto values written earlier the same frame -
+            // y by FirstPersonController.UpdateCameraHeight, the rotation by
+            // PlayerLook.Update - and both of those write absolutely, every frame.
+            // Nothing here may become the sole author of a channel, or the offset
+            // accumulates instead of being an offset.
             Vector3 local = cameraPivot.localPosition;
             local.y += vertical;
             local.x = horizontal;

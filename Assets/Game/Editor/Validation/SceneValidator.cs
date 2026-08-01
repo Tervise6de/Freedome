@@ -71,7 +71,7 @@ namespace Freedome.EditorTools.Validation
             }
         }
 
-        [MenuItem("Freedome/Validate Scene and Settings", priority = 41)]
+        [MenuItem("Freedome/Validate Scene and Settings", false, 41)]
         public static void ValidateFromMenu()
         {
             Report report = ValidateAll(openScene: true);

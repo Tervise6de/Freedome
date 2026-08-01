@@ -172,7 +172,7 @@ namespace Freedome.EditorTools.Generation
             },
         };
 
-        [MenuItem("Freedome/Generate/Materials", priority = 11)]
+        [MenuItem("Freedome/Generate/Materials", false, 11)]
         public static void GenerateFromMenu()
         {
             Cache.Clear();

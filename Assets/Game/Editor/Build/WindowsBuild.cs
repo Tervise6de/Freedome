@@ -28,7 +28,7 @@ namespace Freedome.EditorTools.Build
 
         public static string ExecutablePath => Path.Combine(OutputDirectory, ExecutableName);
 
-        [MenuItem("Freedome/Build Windows Player", priority = 60)]
+        [MenuItem("Freedome/Build Windows Player", false, 60)]
         public static void BuildFromMenu()
         {
             BuildReport report = Run(regenerate: false, bake: false, development: false);
@@ -50,7 +50,10 @@ namespace Freedome.EditorTools.Build
         /// <summary>Batch-mode entry point.</summary>
         public static void PerformBuild()
         {
-            string[] args = Environment.GetCommandLineArgs();
+            // Fully qualified: this file sits in Freedome.EditorTools.Build, so a
+            // bare "Environment" binds to the Freedome.Environment namespace that
+            // holds ShedDimensions, not to System.Environment.
+            string[] args = System.Environment.GetCommandLineArgs();
             bool regenerate = Array.IndexOf(args, "-regenerate") >= 0;
             bool bake = Array.IndexOf(args, "-bakeLighting") >= 0;
             bool development = Array.IndexOf(args, "-development") >= 0;

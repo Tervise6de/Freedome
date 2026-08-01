@@ -22,7 +22,7 @@ namespace Freedome.EditorTools.Build
         public const int TargetWidth = 1920;
         public const int TargetHeight = 1080;
 
-        [MenuItem("Freedome/Configure Project Settings", priority = 40)]
+        [MenuItem("Freedome/Configure Project Settings", false, 40)]
         public static void ConfigureFromMenu()
         {
             Configure();

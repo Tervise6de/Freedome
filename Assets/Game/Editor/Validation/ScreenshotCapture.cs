@@ -77,7 +77,7 @@ namespace Freedome.EditorTools.Validation
                 new Vector3(2.60f, 1.32f, 0.60f), 60f),
         };
 
-        [MenuItem("Freedome/Capture Review Screenshots", priority = 42)]
+        [MenuItem("Freedome/Capture Review Screenshots", false, 42)]
         public static void CaptureFromMenu()
         {
             int count = CaptureAll();

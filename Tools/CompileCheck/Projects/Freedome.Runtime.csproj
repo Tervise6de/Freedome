@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Mirrors Assets/Game/Scripts/Freedome.Runtime.asmdef. It deliberately does
+       NOT reference the UnityEditor stubs: reaching for an editor API from
+       runtime code must fail here exactly as it would in a player build. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- The project targets Unity, which has its own analyzer set; running the
+         SDK default analyzers here would bury real errors in style noise. -->
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <!-- CS0649 is unavoidable noise here: Unity's serializer assigns
+         [SerializeField] fields from the inspector, which Roslyn cannot see.
+         Everything else stays on, and warnings are errors so nothing is
+         quietly ignored. -->
+    <NoWarn>$(NoWarn);CS1591;CS0649</NoWarn>
+    <AssemblyName>Freedome.Runtime</AssemblyName>
+    <RootNamespace>Freedome</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Game/Scripts/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Stubs/Engine/Stubs.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -90,12 +90,14 @@ namespace Freedome.Tests.EditMode
             MeshBuilder mb = new MeshBuilder("plate");
             mb.AddBox(Vector3.zero, new Vector3(4.0f, 0.045f, 0.090f), 0);
 
-            Bounds uv = UvBounds(mb.ToMesh());
+            Mesh mesh = mb.ToMesh();
 
-            Assert.AreEqual(4.0f, uv.size.y, 0.001f,
+            Assert.AreEqual(4.0f, UvBounds(mesh).size.y, 0.001f,
                 "V should span the 4 m length, so the fibre runs along the plate");
-            Assert.AreEqual(0.090f, uv.size.x, 0.001f,
-                "U should span the section, not the length");
+
+            // The top face is the 4 m x 90 mm one. Its V must climb along X.
+            AssertVRunsAlong(mesh, Vector3.up, Vector3.right,
+                "grain on a top plate should run along its length");
         }
 
         [Test]
@@ -105,10 +107,14 @@ namespace Freedome.Tests.EditMode
             MeshBuilder mb = new MeshBuilder("stud");
             mb.AddBox(Vector3.zero, new Vector3(0.045f, 2.265f, 0.090f), 0);
 
-            Bounds uv = UvBounds(mb.ToMesh());
+            Mesh mesh = mb.ToMesh();
 
-            Assert.AreEqual(2.265f, uv.size.y, 0.001f,
+            Assert.AreEqual(2.265f, UvBounds(mesh).size.y, 0.001f,
                 "V should span the stud's length");
+
+            // The 45 x 2265 face looks along Z. Its V must climb vertically.
+            AssertVRunsAlong(mesh, Vector3.forward, Vector3.up,
+                "grain on a stud should run up it, not across it");
         }
 
         [Test]
@@ -120,10 +126,16 @@ namespace Freedome.Tests.EditMode
             mb.AddBox(Vector3.zero, new Vector3(2.60f, 0.090f, 0.045f),
                       Quaternion.Euler(0f, 0f, -22f), 0);
 
-            Bounds uv = UvBounds(mb.ToMesh());
+            Mesh mesh = mb.ToMesh();
 
-            Assert.AreEqual(2.60f, uv.size.y, 0.002f,
+            Assert.AreEqual(2.60f, UvBounds(mesh).size.y, 0.002f,
                 "V should still span the rafter's length after it is tilted");
+
+            // A rotation about Z leaves the +Z face pointing the same way, so that
+            // face is where the tilted length axis shows up cleanly.
+            Vector3 alongRafter = Quaternion.Euler(0f, 0f, -22f) * Vector3.right;
+            AssertVRunsAlong(mesh, Vector3.forward, alongRafter,
+                "grain should follow the rafter, not the world axis nearest to it");
         }
 
         [Test]
@@ -305,6 +317,61 @@ namespace Freedome.Tests.EditMode
                 bounds.Encapsulate(uv);
             }
             return bounds;
+        }
+
+        /// <summary>
+        /// The world direction along which V increases on one specific face.
+        ///
+        /// This exists because UvBounds cannot tell you anything about grain: it
+        /// unions every face of the box, and a box has faces in all orientations,
+        /// so its V extent is the piece's longest dimension no matter which way
+        /// the grain actually runs. Checking one face is what pins the direction.
+        /// </summary>
+        private static Vector3 VAxisOnFace(Mesh mesh, Vector3 faceNormal)
+        {
+            Vector3[] verts = mesh.vertices;
+            Vector3[] normals = mesh.normals;
+            Vector2[] uvs = mesh.uv;
+
+            List<int> face = new List<int>();
+            for (int i = 0; i < verts.Length; i++)
+            {
+                if (Vector3.Dot(normals[i], faceNormal) > 0.99f)
+                {
+                    face.Add(i);
+                }
+            }
+
+            Assert.Greater(face.Count, 2, $"no face found with normal {faceNormal}");
+
+            Vector3 meanPosition = Vector3.zero;
+            float meanV = 0f;
+            foreach (int i in face)
+            {
+                meanPosition += verts[i];
+                meanV += uvs[i].y;
+            }
+            meanPosition /= face.Count;
+            meanV /= face.Count;
+
+            // Covariance of position against V: the direction V climbs in.
+            Vector3 covariance = Vector3.zero;
+            foreach (int i in face)
+            {
+                covariance += (verts[i] - meanPosition) * (uvs[i].y - meanV);
+            }
+
+            Assert.Greater(covariance.magnitude, 1e-6f, "V does not vary across the face");
+            return covariance.normalized;
+        }
+
+        private static void AssertVRunsAlong(Mesh mesh, Vector3 faceNormal, Vector3 expected, string because)
+        {
+            Vector3 actual = VAxisOnFace(mesh, faceNormal);
+
+            // Sign is irrelevant - the fibre has no head or tail.
+            float alignment = Mathf.Abs(Vector3.Dot(actual, expected.normalized));
+            Assert.Greater(alignment, 0.99f, $"{because} (V runs along {actual}, expected {expected})");
         }
     }
 }

@@ -24,9 +24,10 @@ and Unity's manual licence activation is entirely a browser flow.
 So a phone gets you compilation, tests, a baked scene and a packaged build. It
 does not get you the screenshots or the profiling.
 
-That is still the most valuable half. Nothing in this repository has ever been
-compiled, so "does the C# actually build against HDRP 17" is the question most
-worth answering, and this answers it.
+That is still the most valuable half. `./Tools/compile_check.sh` has since
+type-checked everything except HDRP without Unity, so the open question has
+narrowed to "does the C# build against **HDRP 17** specifically" - which no
+stub can answer and this can.
 
 ## What it costs
 
@@ -93,11 +94,17 @@ HDRP from scratch. Later runs reuse the cached `Library`.
 
 ### 3. Read the result
 
-- **It failed during "Build Windows player" with compile errors.** Expected on
-  the first attempt, and genuinely useful - this is the HDRP API surface that
+- **It failed during "Build Windows player" with compile errors.** Still
+  possible, and genuinely useful - this is the HDRP API surface that
   `docs/KNOWN_ISSUES.md` flags as the highest risk. Download the **unity-logs**
   artifact, and either fix them yourself or paste them into a Claude Code
   session.
+
+  Two compile errors that *would* have stopped this run have since been found
+  and fixed without Unity, by `./Tools/compile_check.sh` - including one in
+  `WindowsBuild.PerformBuild`, the very method this workflow calls. So the run
+  should get further than it would have. Everything except HDRP is now
+  type-checked.
 - **It succeeded.** Download the **ShedRoomDemo-Windows** artifact. That is the
   build. Run it on a Windows machine to close the rest of criterion 1, take the
   screenshots with `Freedome > Capture Review Screenshots`, and press F3 in the

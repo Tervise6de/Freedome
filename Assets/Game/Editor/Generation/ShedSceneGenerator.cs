@@ -25,7 +25,7 @@ namespace Freedome.EditorTools.Generation
         public const string ScenePath = "Assets/Game/Scenes/ShedRoom.unity";
         public const string SceneFolder = "Assets/Game/Scenes";
 
-        [MenuItem("Freedome/Generate/Shed Room Scene", priority = 1)]
+        [MenuItem("Freedome/Generate/Shed Room Scene", false, 1)]
         public static void GenerateFromMenu()
         {
             if (!EditorUtility.DisplayDialog("Generate shed room",
@@ -240,7 +240,7 @@ namespace Freedome.EditorTools.Generation
         // Convenience: regenerate everything, textures included
         // =====================================================================
 
-        [MenuItem("Freedome/Generate/Everything (textures, materials, scene)", priority = 0)]
+        [MenuItem("Freedome/Generate/Everything (textures, materials, scene)", false, 0)]
         public static void GenerateEverything()
         {
             ShedTextureGenerator.GenerateAll();

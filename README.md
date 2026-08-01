@@ -7,9 +7,13 @@ no game in it yet, and by design there should not be.
 > **Status: the project is complete as source; it has not been opened in Unity.**
 > It was authored in a Linux container that has no Unity installation and whose
 > network policy blocks Unity's download servers, so the scene has never been
-> generated, rendered, profiled or packaged. Nothing here has run. See
-> [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for exactly what that means and
-> what to check first.
+> generated, rendered, profiled or packaged.
+>
+> The C# *has* since been type-checked, and 31 of the 35 EditMode tests do run -
+> against hand-written stand-ins for the Unity API rather than Unity itself
+> (`./Tools/compile_check.sh`). That found five defects, two of which were hard
+> compile errors. It says nothing about how any of this looks or performs, and
+> nothing about HDRP. See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
 
 ---
 
@@ -50,6 +54,10 @@ to sign into.
 
 # 3. Run the tests:
 ./Tools/run_tests.sh all
+
+# 3a. Or type-check and run the Unity-free tests without Unity at all
+#     (needs only dotnet-sdk-8.0 - no editor, no GPU):
+./Tools/compile_check.sh
 
 # 4. Regenerate the scale drawings and the preview renders after changing
 #    any dimension:
@@ -125,6 +133,7 @@ docs                       design documents, drawings, screenshots
 | [docs/previews/README.md](docs/previews/README.md) | Software-rasterised preview renders - what they are, and what they are not |
 | [docs/RUNNING_IN_CLOUD.md](docs/RUNNING_IN_CLOUD.md) | Getting Unity running in a cloud session, and which acceptance criteria that would actually close |
 | [docs/BUILDING_FROM_A_PHONE.md](docs/BUILDING_FROM_A_PHONE.md) | Compiling, testing and building via GitHub Actions with no desktop machine |
+| [Tools/CompileCheck/README.md](Tools/CompileCheck/README.md) | Type-checking the project without Unity - what it proves, what it does not, and what it found |
 | [TASKS.md](TASKS.md) | The milestone checklist and its real status |
 
 ## Scope

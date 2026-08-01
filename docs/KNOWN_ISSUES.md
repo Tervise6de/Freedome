@@ -27,8 +27,9 @@ Unity could not be installed and could not have been run if it had been.
 Consequently:
 
 - **The scene has never been generated.** No builder has executed.
-- **No C# has been compiled.** Not the runtime, not the editor code, not the
-  tests.
+- **No C# has been compiled by Unity.** It has since been compiled by Roslyn
+  against stand-in assemblies - see the compile check below - which is not the
+  same thing, but is no longer nothing.
 - **Nothing has been rendered.** No screenshot exists.
 - **Nothing has been profiled.** Every performance figure in the docs is a design
   intent, not a measurement.
@@ -36,8 +37,7 @@ Consequently:
   empty.
 - **No test has run.** The suites are written but unexecuted.
 
-What *was* verified, by two independent passes that read the same dimension
-table the scene generator reads:
+What *was* verified, by three independent passes:
 
 - **Scale drawings** (`docs/diagrams/`, from `Tools/generate_diagrams.py`) -
   confirmed proportions, layout, circulation width and human-scale
@@ -46,11 +46,24 @@ table the scene generator reads:
   software rasterisation of the reconstructed room from the eight review
   viewpoints. Confirmed that the framing, roof structure, openings and prop
   placement read correctly, and caught three more real defects in the C#.
+- **Compile check** (`./Tools/compile_check.sh`) - all 9,000 lines type-checked
+  with Roslyn against hand-written Unity stand-ins, plus 31 of the 35 EditMode
+  tests actually executed. Caught five more defects, two of them hard compile
+  failures. See [Tools/CompileCheck/README.md](../Tools/CompileCheck/README.md).
 
-Both are recorded below. Neither is a Unity render: no HDRP material, no baked
-light, no texture and no performance figure has been seen.
+None of the three is a Unity render or a Unity compile: no HDRP material, no
+baked light, no texture and no performance figure has been seen, and no Unity
+editor has resolved the HDRP package.
 
-Treat everything else as a careful first draft that compiles in the author's head.
+Treat everything else as a careful first draft.
+
+### What the compile check changes, and what it does not
+
+It closes "does the C# parse, resolve and hold together" for everything except
+HDRP, and it turns the dimension table and `MeshBuilder` from asserted into
+tested. It does **not** touch issue 1 below: the stubs say what HDRP's API
+*should* look like, and a clean compile against them proves the project is
+self-consistent, not that HDRP 17.0.4 agrees. That still needs a real editor.
 
 ### Getting it to run here instead
 
@@ -207,11 +220,19 @@ Recorded because the method that caught them is worth repeating.
 | Window sill board's top face was coplanar with the framing sill trimmer | Preview render 08 - z-fighting speckle right where the player leans in | Sill board now sits on the trimmer rather than flush with it |
 | Top-shelf sack used the tarpaulin material, so a bag of feed read as a folded blue groundsheet | Preview render 02 | Switched to the card material - a paper sack |
 | Wood grain ran across every horizontal member instead of along it. UVs projected against each face's dominant world axis, and the side of a top plate faces sideways whichever way the plate runs, so V ended up vertical on plates, rafters, purlins, collar ties, noggins and bench rails | Reading `MeshBuilder.PlanarUv` against what `SamplePine` actually generates | `MeshBuilder` now derives the UV frame from a grain direction: V follows the piece's own longest axis, carried through its rotation, with `GrainOverride` for materials that have a direction the geometry does not imply |
+| `[MenuItem("...", priority = N)]` on all eight menu entries. Unity's `priority` is an internal field, so a named attribute argument cannot bind to it - this is a hard compile error, and it took out every entry point to the project's tooling | Compile check | Changed to the positional form, `[MenuItem("...", false, N)]` |
+| `Environment.GetCommandLineArgs()` in `WindowsBuild.PerformBuild` resolved to the `Freedome.Environment` namespace, not `System.Environment`, because the file sits inside `Freedome.EditorTools.Build`. Another hard compile error, in the exact method the GitHub Actions workflow names as its `buildMethod` | Compile check | Fully qualified as `System.Environment` |
+| `PlayerLook` stopped writing the camera pivot's rotation while input was disabled, but `HeadBob` multiplies its roll into that same value every frame in `LateUpdate`. With the pause menu open the roll had nothing resetting it, so the camera rotated about 21 degrees a second and snapped back on resume | Compile check - the dead field `HeadBob._baseLocalPosition` was the thread to pull | `PlayerLook` now writes the pivot rotation unconditionally; that channel is its to own absolutely |
+| Three grain tests passed with `MeshBuilder.LongestAxis` deliberately broken. They asserted against `UvBounds`, which unions every face of a box - and a box has faces in all orientations, so the V extent is the piece's longest dimension however the grain runs | Mutation-testing the compile check | Added `AssertVRunsAlong`, which checks the V direction on one named face. The mutation is now caught |
 
-Drawing the room to scale, and then rasterising it, from the same numbers the
-generator uses caught six faults that no amount of reading the code would have.
-That is the argument for keeping `Tools/generate_diagrams.py` and
-`Tools/preview_render.py` working.
+Drawing the room to scale, rasterising it, and finally type-checking it caught
+eleven faults that no amount of reading the code would have. That is the
+argument for keeping `Tools/generate_diagrams.py`, `Tools/preview_render.py`
+and `Tools/compile_check.sh` working.
+
+The compile check is also the one of the three that a contributor should run
+before every commit: it takes seconds and it is the only one that would have
+stopped two hard compile errors reaching the repository.
 
 ---
 

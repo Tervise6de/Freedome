@@ -105,9 +105,17 @@ Builders live in `Assets/Game/Editor/Generation/`:
 ## Before claiming anything works
 
 ```bash
-./Tools/run_tests.sh all                  # EditMode + PlayMode
+./Tools/compile_check.sh                  # type-check + the Unity-free tests
+./Tools/run_tests.sh all                  # EditMode + PlayMode (needs Unity)
 python3 Tools/generate_diagrams.py        # after any dimension change
 ```
+
+`compile_check.sh` needs only `dotnet-sdk-8.0` - no Unity, no GPU - and takes
+seconds. Run it before every commit. It compiles all four assemblies against
+hand-written Unity stand-ins and executes 31 of the 35 EditMode tests. It is
+the only check available here that would catch a hard compile error, and it
+has already caught two. It says nothing about HDRP; see
+[Tools/CompileCheck/README.md](Tools/CompileCheck/README.md).
 
 In the editor: `Freedome > Validate Scene and Settings`.
 
@@ -126,7 +134,9 @@ that check to get a build out.
 ## Things that will trip you up
 
 1. **HDRP APIs move between versions.** `LightingBuilder`, `ShedMaterialLibrary`
-   and `ProjectConfigurator` are the most likely to fail to compile first.
+   and `ProjectConfigurator` are the most likely to fail to compile first. The
+   compile check cannot help you here - its HDRP stubs assert what the API
+   should be, so they agree with the code by construction.
 2. **Legacy input is deliberate.** The Input System package is intentionally
    absent from the manifest. Adding it breaks the controller unless Active Input
    Handling is set to "Both".
