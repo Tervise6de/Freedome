@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Freedome.Player;
+using Freedome.Interaction;
 using Freedome.Settings;
 
 namespace Freedome.UI
@@ -26,6 +27,7 @@ namespace Freedome.UI
 
         private FirstPersonController _player;
         private PlayerLook _look;
+        private PlayerInteractor _interactor;
         private GraphicsSettingsController _graphics;
 
         private GameObject _root;
@@ -41,6 +43,7 @@ namespace Freedome.UI
         {
             _player = FindAnyObjectByType<FirstPersonController>();
             _look = FindAnyObjectByType<PlayerLook>();
+            _interactor = FindAnyObjectByType<PlayerInteractor>();
             _graphics = FindAnyObjectByType<GraphicsSettingsController>();
 
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -93,6 +96,12 @@ namespace Freedome.UI
             if (_look != null)
             {
                 _look.InputEnabled = !paused;
+            }
+            if (_interactor != null)
+            {
+                // Also clears the prompt, so the pause menu is not drawn over the top
+                // of "[E] Open the door".
+                _interactor.InputEnabled = !paused;
             }
         }
 

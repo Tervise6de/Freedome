@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Freedome.Interaction;
 using Freedome.Environment;
 using Dim = Freedome.Environment.ShedDimensions;
 using Keys = Freedome.EditorTools.Generation.ShedMaterialLibrary.Keys;
@@ -272,9 +273,26 @@ namespace Freedome.EditorTools.Generation
             mb.AddBox(new Vector3(0f, -0.010f, l * 0.5f - 0.055f),
                       new Vector3(0.080f, 0.012f, 0.022f), 1, 0.002f);
 
-            ctx.CreateObject("Shed_ServicePanel", mb, new[] { Keys.Floorboard, Keys.Hardware },
-                parent, new Vector3(Dim.ServicePanelCentreX, 0f, Dim.ServicePanelCentreZ),
-                Quaternion.identity, BuildContext.ColliderKind.Box);
+            // Hinged along its far edge so it lifts like a floor hatch rather than
+            // sliding. Still an ordinary service panel: no marking, no highlight, and
+            // nothing under it but joists and the underside of the platform.
+            float halfPanelZ = Dim.ServicePanelLength * 0.5f;
+            GameObject hinge = ctx.CreateGroup("ServicePanel_Hinge", parent);
+            hinge.transform.localPosition = new Vector3(
+                Dim.ServicePanelCentreX, 0f, Dim.ServicePanelCentreZ - halfPanelZ);
+            BuildContext.MarkMovable(hinge);
+
+            GameObject panel = ctx.CreateObject("Shed_ServicePanel", mb,
+                new[] { Keys.Floorboard, Keys.Hardware },
+                hinge.transform, new Vector3(0f, 0f, halfPanelZ),
+                Quaternion.identity, BuildContext.ColliderKind.Box, isStatic: false);
+
+            if (panel != null)
+            {
+                HingedPart part = hinge.AddComponent<HingedPart>();
+                part.Configure("Lift the floor panel", "Lower the floor panel",
+                               Vector3.right, -78f, 110f, null);
+            }
         }
 
         // =====================================================================

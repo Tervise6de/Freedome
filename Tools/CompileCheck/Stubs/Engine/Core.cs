@@ -471,6 +471,8 @@ namespace UnityEngine
         public static bool SphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) { hitInfo = default(RaycastHit); return false; }
         public static bool SphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { hitInfo = default(RaycastHit); return false; }
         public static bool SphereCast(Ray ray, float radius, out RaycastHit hitInfo, float maxDistance) { hitInfo = default(RaycastHit); return false; }
+        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { hitInfo = default(RaycastHit); return false; }
+        public static bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { hitInfo = default(RaycastHit); return false; }
         public static bool CapsuleCast(Vector3 point1, Vector3 point2, float radius, Vector3 direction, out RaycastHit hitInfo, float maxDistance) { hitInfo = default(RaycastHit); return false; }
         public static bool CheckSphere(Vector3 position, float radius, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { return false; }
     }
@@ -550,8 +552,26 @@ namespace UnityEngine
         public float drag { get; set; }
         public bool isKinematic { get; set; }
         public bool useGravity { get; set; }
+        public bool detectCollisions { get; set; }
+        public bool freezeRotation { get; set; }
+        public RigidbodyInterpolation interpolation { get; set; }
+        public CollisionDetectionMode collisionDetectionMode { get; set; }
+        public RigidbodyConstraints constraints { get; set; }
         public void AddForce(Vector3 force) { }
         public void MovePosition(Vector3 position) { }
+    }
+
+    public enum RigidbodyInterpolation { None = 0, Interpolate = 1, Extrapolate = 2 }
+
+    public enum CollisionDetectionMode { Discrete = 0, Continuous = 1, ContinuousDynamic = 2, ContinuousSpeculative = 3 }
+
+    [Flags]
+    public enum RigidbodyConstraints
+    {
+        None = 0,
+        FreezePositionX = 2, FreezePositionY = 4, FreezePositionZ = 8,
+        FreezeRotationX = 16, FreezeRotationY = 32, FreezeRotationZ = 64,
+        FreezePosition = 14, FreezeRotation = 112, FreezeAll = 126,
     }
 
     [Flags]

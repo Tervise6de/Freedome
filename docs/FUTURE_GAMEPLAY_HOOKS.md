@@ -196,14 +196,30 @@ or more valuable than everything around it.
 
 ## Distribution check
 
-| # | Affordance | Surface | Height |
-| --- | --- | --- | --- |
-| 1 | Door and lock | Entrance wall, z = -3.0 | 0 - 2.04 m |
-| 2 | Window and frame | Workbench wall, x = +2.0 | 1.20 - 1.80 m |
-| 3 | Vent | Utility wall, z = +3.0 | 2.05 m |
-| 4 | Breaker and circuit | Utility wall + two more walls | 0.35 - 2.30 m |
-| 5 | Floor panel | Floor, centre-left | 0 m |
-| 6 | Radio | Utility shelf | 1.10 m |
+| # | Affordance | Surface | Height | Moves? |
+| --- | --- | --- | --- | --- |
+| 1 | Door and lock | Entrance wall, z = -3.0 | 0 - 2.04 m | **Yes** - swings outward 92 deg |
+| 2 | Window and frame | Workbench wall, x = +2.0 | 1.20 - 1.80 m | No - casement is still in the shared mesh |
+| 3 | Vent | Utility wall, z = +3.0 | 2.05 m | No |
+| 4 | Breaker and circuit | Utility wall + two more walls | 0.35 - 2.30 m | Partly - the light switch works; the consumer unit does not |
+| 5 | Floor panel | Floor, centre-left | 0 m | **Yes** - lifts 78 deg on its far edge |
+| 6 | Radio | Utility shelf | 1.10 m | No - and it does not play anything |
+
+### What "moves" does and does not mean
+
+Three of these now respond to the use key. That is a change from the original
+milestone, made deliberately, and it does not change what they *are*.
+
+A door that opens is not a hint that the door matters. None of these is
+highlighted, outlined, marked or accompanied by a sound. None of them reports to
+anything, gates anything, or is required for anything - there is nothing in this
+project to be required *for*. The floor panel lifts and underneath it are
+joists, because that is what is under a floor.
+
+The three that do not move are held back by the mesh they live in rather than by
+principle: the window casement, the vent louvres and the radio are appended into
+shared meshes for draw-call reasons, and anything that moves needs its own
+object. Splitting them out is mechanical work, not a design decision.
 
 Four walls, one floor, one shelf; heights from the floor to just under the plate.
 No two of them share a sightline in a way that groups them.

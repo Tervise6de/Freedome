@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Freedome.Interaction;
 using Dim = Freedome.Environment.ShedDimensions;
 using Keys = Freedome.EditorTools.Generation.ShedMaterialLibrary.Keys;
 
@@ -38,6 +39,7 @@ namespace Freedome.EditorTools.Generation
             BuildConsumerUnit(mb);
             BuildSocket(mb);
             BuildSwitch(mb);
+            BuildSwitchRocker(ctx, parent);
             BuildConduitCircuit(mb);
             BuildLightingCable(mb);
 
@@ -141,6 +143,44 @@ namespace Freedome.EditorTools.Generation
             }
         }
 
+        /// <summary>
+        /// The rocker only. It is the one piece of the switch that moves, so it is
+        /// the one piece that cannot live in the shared wall mesh. Its hinge is the
+        /// top edge of the plate, which is how a rocker actually pivots.
+        /// </summary>
+        private static void BuildSwitchRocker(BuildContext ctx, Transform parent)
+        {
+            MeshBuilder mb = new MeshBuilder("LightSwitch_Rocker", 1);
+            mb.AddBox(new Vector3(0f, -0.023f, 0f), new Vector3(0.030f, 0.046f, 0.008f), 0, 0.002f);
+
+            GameObject pivot = ctx.CreateGroup("LightSwitch_Pivot", parent);
+            pivot.transform.localPosition = new Vector3(
+                Dim.LightSwitchX, Dim.LightSwitchY + 0.027f, -Dim.HalfLength + 0.047f);
+            BuildContext.MarkMovable(pivot);
+
+            GameObject rocker = ctx.CreateObject("LightSwitch_Rocker", mb, new[] { Keys.Hardware },
+                pivot.transform, Vector3.zero, Quaternion.identity,
+                BuildContext.ColliderKind.Box, isStatic: false);
+
+            if (rocker != null)
+            {
+                // The rocker is 30 x 46 mm. Aiming at that from across the room is
+                // fiddly, so the collider is grown to the plate's own footprint - big
+                // enough to hit comfortably, still small enough that it cannot be
+                // confused with the wall behind it.
+                BoxCollider box = rocker.GetComponent<BoxCollider>();
+                if (box != null)
+                {
+                    box.center = new Vector3(0f, -0.023f, 0f);
+                    box.size = new Vector3(0.090f, 0.090f, 0.020f);
+                }
+
+                // Wired to the ceiling lamp by ShedSceneGenerator, once LightingBuilder
+                // has actually created it.
+                pivot.AddComponent<ToggleSwitch>();
+            }
+        }
+
         private static void BuildSwitch(MeshBuilder mb)
         {
             float x = Dim.LightSwitchX;
@@ -149,7 +189,6 @@ namespace Freedome.EditorTools.Generation
 
             mb.AddBox(new Vector3(x, y, z + 0.018f), new Vector3(0.078f, 0.078f, 0.036f), 0, 0.003f);
             mb.AddBox(new Vector3(x, y, z + 0.040f), new Vector3(0.088f, 0.088f, 0.008f), 0, 0.003f);
-            mb.AddBox(new Vector3(x, y + 0.004f, z + 0.047f), new Vector3(0.030f, 0.046f, 0.008f), 0, 0.002f);
 
             foreach (int s in new[] { -1, 1 })
             {

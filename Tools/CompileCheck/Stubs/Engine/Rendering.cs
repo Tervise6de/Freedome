@@ -380,6 +380,33 @@ namespace UnityEngine
         public Rendering.MotionVectorGenerationMode motionVectorGenerationMode { get; set; }
         public bool allowOcclusionWhenDynamic { get; set; }
         public bool staticShadowCaster { get; set; }
+
+        public void GetPropertyBlock(MaterialPropertyBlock properties) { }
+        public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) { }
+        public void SetPropertyBlock(MaterialPropertyBlock properties) { }
+        public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) { }
+        public bool HasPropertyBlock() { return false; }
+    }
+
+    public sealed class MaterialPropertyBlock
+    {
+        public MaterialPropertyBlock() { }
+
+        public bool isEmpty { get { return true; } }
+
+        public void Clear() { }
+        public void SetFloat(string name, float value) { }
+        public void SetFloat(int nameID, float value) { }
+        public void SetInt(string name, int value) { }
+        public void SetColor(string name, Color value) { }
+        public void SetColor(int nameID, Color value) { }
+        public void SetVector(string name, Vector4 value) { }
+        public void SetVector(int nameID, Vector4 value) { }
+        public void SetTexture(string name, Texture value) { }
+        public void SetTexture(int nameID, Texture value) { }
+        public void SetMatrix(int nameID, Matrix4x4 value) { }
+        public float GetFloat(int nameID) { return 0f; }
+        public Color GetColor(int nameID) { return default(Color); }
     }
 
     public sealed class MeshRenderer : Renderer

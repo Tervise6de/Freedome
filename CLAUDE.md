@@ -5,8 +5,11 @@ Guidance for AI assistants working in this repository.
 ## What this project is
 
 A Unity 6 / HDRP environment milestone: one walkable, realistically proportioned
-6 m x 4 m timber shed for Windows. **It is not a game and must not become one in
-this milestone.**
+6 m x 4 m timber shed for Windows, which you can also handle - doors open,
+the light switches, five loose objects can be picked up and put down.
+
+**It is still not a game.** There is no objective, no state that persists past
+the object you are holding, and nothing in the room reports to anything.
 
 Read [README.md](README.md) first, then
 [docs/ROOM_DESIGN.md](docs/ROOM_DESIGN.md) and
@@ -26,15 +29,32 @@ that nobody knows yet.
 
 Do **not** add, even if it seems obviously useful:
 
-countdown timer, game-over, inventory, item collection, object combination,
-kidnapper AI, escape-route logic, puzzles, evidence journal, narrative clues,
-dialogue, save system, combat, multiplayer, runtime generative AI, procedural
-puzzle generation.
+countdown timer, game-over, inventory UI, object combination, kidnapper AI,
+escape-route logic, puzzles, evidence journal, narrative clues, dialogue, save
+system, combat, multiplayer, runtime generative AI, procedural puzzle
+generation.
 
-The six future gameplay affordances documented in
-[docs/FUTURE_GAMEPLAY_HOOKS.md](docs/FUTURE_GAMEPLAY_HOOKS.md) are architecture
-only. Do not make them interactive, do not highlight them, do not add outlines,
-symbols, markings or audio cues.
+### What interaction is allowed to be
+
+Interaction was added deliberately, and the line it holds is narrow: **an
+interactable does something physical to itself and nothing else.**
+
+Allowed: a door swings, a floor panel lifts, a switch switches a light, an
+object can be carried and put down.
+
+Not allowed, and this is the whole of the boundary: an interactable that sets a
+flag, unlocks something, counts, scores, completes, reveals, or is *required*.
+The moment one object's state changes what another object does, this stops
+being an environment.
+
+Carry is one item at a time, held and dropped. No inventory, no stacking, no
+combining, no throwing.
+
+The affordances in [docs/FUTURE_GAMEPLAY_HOOKS.md](docs/FUTURE_GAMEPLAY_HOOKS.md)
+may now move, but they still may not be **signposted**: no highlights, no
+outlines, no symbols, no markings, no audio stings, and no reticle that changes
+when something is usable. The prompt appearing when you are already looking at
+an object from arm's reach is the entire feedback budget.
 
 ## Tone constraint
 

@@ -200,3 +200,21 @@ Manual - none performed:
    BUILD_REPORT.md.
 8. Profile with F3 and fill in the performance table.
 9. **Stop.** This milestone ends at the finished environment.
+
+
+---
+
+## Interaction (added after the environment milestone)
+
+Requested explicitly after the environment was complete, overturning the
+original "no interactivity" boundary. See DECISIONS.md.
+
+- [x] `Interactable` base, `PlayerInteractor` raycast and use key, `InteractionHud`
+- [x] `HingedPart` - door leaf, service floor panel
+- [x] `ToggleSwitch` - light switch drives the ceiling fitting
+- [x] `Carryable` - five loose objects, one carried at a time, dropped not thrown
+- [x] Movable objects split out of the shared meshes and marked non-static
+- [x] Pause menu disables interaction along with movement and look
+- [x] `InteractionTests` - 8 tests, all running outside Unity
+- [ ] Window casement, vent louvres and radio still static - mesh work, not design
+- [ ] Nothing observed. No door has actually opened.

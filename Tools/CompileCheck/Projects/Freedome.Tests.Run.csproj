@@ -29,6 +29,7 @@
   <ItemGroup>
     <Compile Include="../../../Assets/Game/Tests/EditMode/ShedDimensionsTests.cs" />
     <Compile Include="../../../Assets/Game/Tests/EditMode/GeometryTests.cs" />
+    <Compile Include="../../../Assets/Game/Tests/EditMode/InteractionTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

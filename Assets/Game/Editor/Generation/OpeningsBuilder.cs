@@ -1,4 +1,5 @@
 using UnityEngine;
+using Freedome.Interaction;
 using Dim = Freedome.Environment.ShedDimensions;
 using Keys = Freedome.EditorTools.Generation.ShedMaterialLibrary.Keys;
 
@@ -156,18 +157,35 @@ namespace Freedome.EditorTools.Generation
             // The leaf sits back from the cladding face in its rebate, closed.
             float leafZ = -Dim.WallThickness + 0.0225f + BoardThickness;
 
+            // The hinge, not the leaf, is what rotates. HingedPart only ever writes a
+            // local rotation, so the leaf needs a parent sitting on the hinge line
+            // with the leaf offset half its width away from it.
+            float halfLeaf = Dim.DoorLeafWidth * 0.5f;
+            GameObject hinge = ctx.CreateGroup("Door_Hinge", parent);
+            hinge.transform.localPosition =
+                new Vector3(Dim.DoorCentreX - halfLeaf, 0f, -Dim.HalfLength + leafZ);
+            BuildContext.MarkMovable(hinge);
+
             GameObject leaf = ctx.CreateObject("Door_Leaf", mb,
                 new[] { Keys.StructuralPine, Keys.Hardware },
-                parent, new Vector3(Dim.DoorCentreX, 0f, -Dim.HalfLength + leafZ),
-                Quaternion.identity, BuildContext.ColliderKind.Box);
+                hinge.transform, new Vector3(halfLeaf, 0f, 0f),
+                Quaternion.identity, BuildContext.ColliderKind.Box, isStatic: false);
 
-            // The door is scenery in this milestone. A dedicated blocker keeps the
-            // player inside regardless of how the leaf's own collider is shaped.
             if (leaf != null)
             {
-                BuildContext.CreateBlocker("Door_Blocker", leaf.transform,
+                // Fills the opening while the door is shut and switches off the moment
+                // it starts to swing, so a standing-open door is walkable. The play
+                // area boundary is what keeps the player near the shed once outside.
+                GameObject blockerGo = BuildContext.CreateBlocker("Door_Blocker", leaf.transform,
                     new Vector3(0f, Dim.DoorLeafHeight * 0.5f, 0.02f),
                     new Vector3(Dim.DoorRoughWidth, Dim.DoorRoughHeight, 0.10f));
+                BuildContext.MarkMovable(blockerGo);
+
+                // Swings outward, away from the room, which is how a shed door hung on
+                // exterior tee hinges actually opens.
+                HingedPart part = hinge.AddComponent<HingedPart>();
+                part.Configure("Open the door", "Close the door", Vector3.up, -92f, 150f,
+                               blockerGo != null ? blockerGo.GetComponent<Collider>() : null);
             }
         }
 

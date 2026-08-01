@@ -2,6 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Freedome.Interaction;
 using UnityEngine.Rendering.HighDefinition;
 using Freedome.Environment;
 using Freedome.Player;
@@ -80,6 +81,7 @@ namespace Freedome.EditorTools.Generation
 
                 EditorUtility.DisplayProgressBar("Shed room", "Prop dressing", 0.72f);
                 PropsBuilder.Build(ctx, dressing);
+                CarryablesBuilder.Build(ctx, dressing);
 
                 EditorUtility.DisplayProgressBar("Shed room", "Exterior", 0.80f);
                 ShellBuilder.BuildExterior(ctx, exterior);
@@ -88,6 +90,7 @@ namespace Freedome.EditorTools.Generation
                 LightingBuilder.Build(ctx, lighting);
 
                 EditorUtility.DisplayProgressBar("Shed room", "Player and systems", 0.93f);
+                WireLightSwitch(root.transform);
                 CreatePlayerRig(root.transform);
                 CreateSystems(root.transform);
                 CreateScaleReference(root.transform);
@@ -161,6 +164,48 @@ namespace Freedome.EditorTools.Generation
             player.AddComponent<FirstPersonController>();
             player.AddComponent<PlayerLook>();
             player.AddComponent<HeadBob>();
+            player.AddComponent<PlayerInteractor>();
+            player.AddComponent<InteractionHud>();
+        }
+
+        /// <summary>
+        /// Connects the switch by the door to the ceiling fitting.
+        ///
+        /// This happens here rather than in UtilityBuilder because the switch is built
+        /// with the electrics, well before LightingBuilder creates the lamp it drives.
+        /// Wiring it at the end is the only order in which both exist.
+        /// </summary>
+        private static void WireLightSwitch(Transform root)
+        {
+            ToggleSwitch toggle = root.GetComponentInChildren<ToggleSwitch>(true);
+            if (toggle == null)
+            {
+                return;
+            }
+
+            Light lamp = null;
+            foreach (Light candidate in root.GetComponentsInChildren<Light>(true))
+            {
+                if (candidate.name == "CeilingLight")
+                {
+                    lamp = candidate;
+                    break;
+                }
+            }
+
+            Renderer shade = null;
+            foreach (Renderer candidate in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (candidate.name == "CeilingLight_Fixture")
+                {
+                    shade = candidate;
+                    break;
+                }
+            }
+
+            // Starts on. The scene is lit for daylight, so this reads as a shed whose
+            // owner left the light on rather than as an unlit room waiting to be fixed.
+            toggle.Configure(lamp, shade, true);
         }
 
         private static void CreateSystems(Transform parent)

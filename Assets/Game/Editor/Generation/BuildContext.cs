@@ -36,9 +36,15 @@ namespace Freedome.EditorTools.Generation
         /// Box for props where a tight convex approximation is cheaper and gives the
         /// character controller something stable to slide along.
         /// </param>
+        /// <summary>
+        /// Set <paramref name="isStatic"/> false for anything that moves. A door
+        /// leaf marked static gets batched into the combined mesh and baked into the
+        /// lightmap, and then swings with its lighting welded to where it started.
+        /// </summary>
         public GameObject CreateObject(string name, MeshBuilder builder, string[] materialKeys,
                                        Transform parent, Vector3 position, Quaternion rotation,
-                                       ColliderKind collider = ColliderKind.None)
+                                       ColliderKind collider = ColliderKind.None,
+                                       bool isStatic = true)
         {
             if (builder.VertexCount == 0)
             {
@@ -85,7 +91,14 @@ namespace Freedome.EditorTools.Generation
                 }
             }
 
-            MarkStatic(go);
+            if (isStatic)
+            {
+                MarkStatic(go);
+            }
+            else
+            {
+                MarkMovable(go);
+            }
 
             TotalTriangles += builder.TriangleCount;
             TotalRenderers++;
@@ -112,6 +125,16 @@ namespace Freedome.EditorTools.Generation
                 StaticEditorFlags.BatchingStatic |
                 StaticEditorFlags.ReflectionProbeStatic |
                 StaticEditorFlags.OffMeshLinkGeneration);
+        }
+
+        /// <summary>
+        /// The inverse of <see cref="MarkStatic"/>. Explicit rather than merely
+        /// skipping the call, because a new object inherits its parent's static
+        /// flags and most of these are created under static groups.
+        /// </summary>
+        public static void MarkMovable(GameObject go)
+        {
+            GameObjectUtility.SetStaticEditorFlags(go, 0);
         }
 
         public GameObject CreateGroup(string name, Transform parent = null)

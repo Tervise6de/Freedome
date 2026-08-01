@@ -35,7 +35,10 @@ Consequently:
   intent, not a measurement.
 - **No Windows build has been produced.** `Builds/Windows/ShedRoomDemo/` is
   empty.
-- **No test has run.** The suites are written but unexecuted.
+- **No test has run in Unity.** 39 of them run outside it; see the compile check
+  below.
+- **Nothing has been interacted with.** No door has opened, no object has been
+  picked up, and no dropped rigidbody has landed on anything.
 
 What *was* verified, by four independent passes:
 
@@ -144,33 +147,64 @@ Two caveats keep this from being closed entirely:
 What is still unverified is behaviour: that these calls do what the lighting
 design assumes once HDRP actually executes them.
 
-### 2. Assembly definition references
+### 2. Interaction, none of which has ever run
+
+**Risk: high, and entirely unobserved.** The interaction layer is the newest
+code in the project and the least verifiable without a running game. Specific
+things to look at first, in order:
+
+- **Does the door clear what is around it?** It swings outward 92 degrees on the
+  hinge at `DoorCentreX - DoorLeafWidth/2`. Outward means into the exterior
+  ground plane, which exists, but nothing has checked the swept arc against the
+  cladding, the tee hinges or the boot tray.
+- **Does the blocker switch off in time?** `HingedPart` disables the door's
+  blocker as soon as the leaf moves past 1 degree. If that reads as the player
+  being able to walk through a nearly-shut door, raise the threshold.
+- **Do dropped objects settle?** They are dropped 550 mm in front of the player
+  at 120 mm up, with a sphere check to avoid dropping into geometry. Rigidbodies
+  landing on a procedural floor are exactly where jitter shows up.
+- **Is the switch hittable?** Its collider is grown to 90 x 90 mm, larger than
+  the 30 x 46 mm rocker it draws. Too large and it will catch raycasts aimed at
+  the wall beside it.
+- **Does the held object clip the camera?** Hold offsets are guesses -
+  `Carryable.holdOffset`, roughly 0.3 m right and 0.5 m forward. The near clip
+  plane is 0.05 m.
+- **Baked lighting on moving parts.** The door leaf, panel, rocker and
+  carryables are marked movable, so they take no lightmap and rely on probes.
+  Whether the probe volume actually covers where a carried object goes is
+  unknown.
+
+The arithmetic that *is* checked - hinge offsets, carryable placements, reach -
+is in `InteractionTests`, and it caught one real fault already: a jar of fixings
+placed 350 mm in front of the bench, at bench height, in mid-air.
+
+### 3. Assembly definition references
 
 **Risk: medium.** The asmdefs reference `Unity.RenderPipelines.HighDefinition.Runtime`,
 `.Editor`, `Unity.RenderPipelines.Core.Runtime`, `.Editor` and `UnityEngine.UI` by
 name. These names are stable, but a mismatch produces a wall of type-not-found
 errors that looks worse than it is. Check the asmdef inspector first.
 
-### 3. Package versions
+### 4. Package versions
 
 **Risk: medium.** `Packages/manifest.json` pins HDRP 17.0.4, ProBuilder 6.0.4,
 Test Framework 1.4.5. If the installed Unity 6 patch resolves different versions,
 let the package manager update them rather than forcing these.
 
-### 4. The eaves light leak
+### 5. The eaves light leak
 
 **Risk: medium, visual.** The row of crescents along the top of both long walls
 (see LIGHTING.md) is geometrically correct but has never been seen. It could read
 as a lovely row of highlights or as an obvious seam. Tunable via
 `RoofBuilder.TroughY()`. Look at this early.
 
-### 5. Unbaked lighting
+### 6. Unbaked lighting
 
 **Risk: certain until fixed.** The scene ships unbaked. Until lighting is baked,
 the interior has direct light and sky ambient only and will look flat and dark in
 the corners. Do not judge the art direction before baking.
 
-### 6. The utility wall is the darkest surface in the room
+### 7. The utility wall is the darkest surface in the room
 
 **Risk: medium, visual.** The preview render of the electrical area
 (`docs/previews/05_electrical_utility_area.png`) shows the far gable end
@@ -182,20 +216,20 @@ first after baking. If it is still too dark, the honest fixes in order are:
 widen the vent's contribution, raise the ceiling lamp's output, or move the
 lamp toward the utility end - not a fill light with no fixture.
 
-### 7. Geometry intersections at the eaves
+### 8. Geometry intersections at the eaves
 
 **Risk: medium, visual.** The tapered eaves blocking is generated per rafter bay
 and butts against rafters whose position is computed independently. Small
 overlaps or gaps at those junctions are plausible. Screenshot 6 (ceiling and roof
 structure) is the one that would show it.
 
-### 8. Prop contact with the floor
+### 9. Prop contact with the floor
 
 **Risk: low.** Props are placed by computed base points, not dropped onto
 collision. Anything whose local origin is not exactly at its base will float or
 sink by a few millimetres. Screenshot 7 exists specifically to catch this.
 
-### 9. `ProjectVersion.txt`
+### 10. `ProjectVersion.txt`
 
 **Resolved.** `6000.0.58f1` was originally a guess. It has since been checked
 against the list of released editor builds (via the GameCI image tags, which are
@@ -203,19 +237,19 @@ published per real Unity release) and it is a genuine 6000.0 patch - one of 79.
 The invented revision hash that sat beside it has been removed, since a wrong
 one can stop Unity Hub locating the install.
 
-### 10. Legacy input assumption
+### 11. Legacy input assumption
 
 **Risk: low.** The controller uses the legacy `Input` class. The new Input System
 package is deliberately absent from the manifest so the old input handling stays
 active. If anyone adds `com.unity.inputsystem`, set Active Input Handling to
 "Both" or the controller stops responding.
 
-### 11. Pause menu at non-16:9 aspect ratios
+### 12. Pause menu at non-16:9 aspect ratios
 
 **Risk: low.** The canvas scales with a 1920 x 1080 reference at match 0.5.
 Untested at ultrawide or 4:3.
 
-### 12. Screenshot capture without a bake
+### 13. Screenshot capture without a bake
 
 **Risk: low.** `ScreenshotCapture` renders through a temporary camera. If it is
 run before lighting is baked the shots will show the unbaked room, which is not

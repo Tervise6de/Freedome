@@ -266,3 +266,41 @@ of which was visible from reading the code. See KNOWN_ISSUES.md.
 **Cost.** The parser handles `public const float` only; the handful of computed
 properties are mirrored by hand in the script and flagged in a comment. If that
 list grows, the drawings become a drift risk again.
+
+
+---
+
+## Interaction, and the exception it forces
+
+**Decision.** The shed responds to a use key: the door and the floor panel swing
+on hinges, the light switch works, and five loose objects can be picked up and
+put down.
+
+**This overturns the original milestone**, which said the environment was to
+stay scenery and that the reserved affordances were "architecture only, do not
+make them interactive". That was the right call for an environment being
+reviewed on how it looks. It stopped being the right call once the question
+became whether the room feels like somewhere a person works.
+
+**The line that replaces it.** An interactable does something physical to itself
+and nothing else. No flags, no unlocks, no counters, no completion, nothing
+required. The moment one object's state changes what another object does, this
+is a game and a different set of decisions applies.
+
+**What it costs.** Anything that moves needs its own GameObject, renderer and
+collider, which is a direct exception to decision #4 - props are appended into
+shared meshes to keep the draw-call count down. The exception is currently eight
+objects: the door leaf, the service panel, the switch rocker and five
+carryables. Each one is a draw call that used to be free.
+
+Eight was chosen as the point where the room reads as handled without undoing
+the batching argument for the other couple of hundred pieces. The window
+casement, the vent louvres and the radio stay in their shared meshes and stay
+still, which is why three of the six affordances do not move.
+
+**What is not verified.** All of it. Nothing here has run. The hinge offsets and
+the carryable placements are pinned by arithmetic in `InteractionTests`, which
+caught one placement error - a jar of fixings floating 350 mm in front of the
+bench - but arithmetic cannot tell you whether a door opening outward hits the
+timber stacked against the wall, or whether a dropped paint tin settles or
+jitters.

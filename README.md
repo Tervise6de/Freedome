@@ -35,7 +35,7 @@ frighten anyone.
 | Roof | 22 degree gable, ridge at 3.26 m, exposed rafters |
 | Target | Windows 64-bit, 1920 x 1080, 60 fps on a mid-to-high-end PC |
 | Engine | Unity 6 (6000.0 LTS) + High Definition Render Pipeline |
-| Controls | WASD, mouse look, Ctrl/C to crouch, Esc to pause |
+| Controls | WASD, mouse look, Ctrl/C to crouch, E to use or carry, Esc to pause |
 
 ![Floor plan](docs/diagrams/floor_plan.svg)
 
@@ -146,16 +146,23 @@ docs                       design documents, drawings, screenshots
 ## Scope
 
 Implemented: first-person movement, mouse look, crouch, collision, gravity,
-pause menu, graphics settings, restart, a packaged Windows build pipeline.
+pause menu, graphics settings, restart, a packaged Windows build pipeline, and
+a small amount of physical interaction - the door and the floor panel swing on
+their hinges, the switch by the door works, and five loose objects can be
+picked up and put down.
 
-Deliberately **not** implemented, and not to be added to this milestone: timer,
-game-over, inventory, item collection, object combination, AI, escape-route
-logic, puzzles, journal, narrative clues, dialogue, save system, combat,
-multiplayer, runtime generative AI, procedural puzzle generation.
+Deliberately **not** implemented, and not to be added: timer, game-over,
+inventory UI, object combination, AI, escape-route logic, puzzles, journal,
+narrative clues, dialogue, save system, combat, multiplayer, runtime generative
+AI, procedural puzzle generation.
 
-The environment quietly reserves six architectural affordances for future escape
-routes. They are ordinary parts of a shed and none of them is interactive,
-highlighted or hinted at. See
+The line the interaction holds: **an interactable does something physical to
+itself and nothing else.** Nothing sets a flag, unlocks anything, counts,
+completes or is required. There is no objective in this project.
+
+The environment reserves six architectural affordances for future escape
+routes. Three of them now move, because a shed whose door does not open is a
+diorama. None of them is highlighted, outlined, marked or hinted at. See
 [docs/FUTURE_GAMEPLAY_HOOKS.md](docs/FUTURE_GAMEPLAY_HOOKS.md).
 
 ## Licence
