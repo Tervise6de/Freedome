@@ -218,3 +218,7 @@ original "no interactivity" boundary. See DECISIONS.md.
 - [x] `InteractionTests` - 8 tests, all running outside Unity
 - [ ] Window casement, vent louvres and radio still static - mesh work, not design
 - [ ] Nothing observed. No door has actually opened.
+
+- [x] Bench drawers slide, with a tin of screws and a folding rule inside
+- [x] Six-slot inventory, number keys to hold, G to put down
+- [x] Ridge cap closed - it had a 6.5 mm gap the full length of the roof

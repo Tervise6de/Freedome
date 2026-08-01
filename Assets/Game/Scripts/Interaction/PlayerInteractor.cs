@@ -15,9 +15,12 @@ namespace Freedome.Interaction
         [SerializeField] private Transform cameraPivot;
         [SerializeField] private float reach = 2.2f;
         [SerializeField] private KeyCode useKey = KeyCode.E;
+        [SerializeField] private KeyCode dropKey = KeyCode.G;
         [SerializeField] private float dropClearance = 0.55f;
 
         private Transform _carryAnchor;
+        private Transform _stowPoint;
+        private PlayerInventory _inventory;
         private Carryable _carried;
         private Interactable _focus;
 
@@ -31,8 +34,27 @@ namespace Freedome.Interaction
             get { return _carried; }
         }
 
+        public PlayerInventory Inventory
+        {
+            get { return _inventory; }
+        }
+
         private void Awake()
         {
+            _inventory = GetComponent<PlayerInventory>();
+            if (_inventory == null)
+            {
+                _inventory = gameObject.AddComponent<PlayerInventory>();
+            }
+            _inventory.Changed += OnInventoryChanged;
+
+            // Stowed objects park here, deactivated. Keeping them parented to the
+            // player rather than leaving them where they were picked up means the
+            // scene hierarchy still says who has what.
+            GameObject stow = new GameObject("Stowed");
+            stow.transform.SetParent(transform, false);
+            _stowPoint = stow.transform;
+
             if (cameraPivot == null)
             {
                 Camera child = GetComponentInChildren<Camera>();
@@ -52,6 +74,14 @@ namespace Freedome.Interaction
             }
         }
 
+        private void OnDestroy()
+        {
+            if (_inventory != null)
+            {
+                _inventory.Changed -= OnInventoryChanged;
+            }
+        }
+
         private void Update()
         {
             if (!InputEnabled)
@@ -60,34 +90,74 @@ namespace Freedome.Interaction
                 return;
             }
 
+            ReadSlotKeys();
+
             _focus = FindFocus();
             CurrentPrompt = BuildPrompt();
 
-            if (!Input.GetKeyDown(useKey))
+            if (Input.GetKeyDown(dropKey))
+            {
+                Drop();
+                return;
+            }
+
+            if (Input.GetKeyDown(useKey) && _focus != null && _focus.CanInteract)
+            {
+                _focus.Interact(this);
+            }
+        }
+
+        private void ReadSlotKeys()
+        {
+            for (int i = 0; i < PlayerInventory.Capacity; i++)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+                {
+                    _inventory.Select(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Puts whatever the inventory has selected into the player's hand, and
+        /// stows whatever was there before.
+        /// </summary>
+        private void OnInventoryChanged()
+        {
+            Carryable wanted = _inventory.Selected;
+            if (wanted == _carried)
             {
                 return;
             }
 
             if (_carried != null)
             {
-                Drop();
+                _carried.Stow(_stowPoint);
+                _carried = null;
             }
-            else if (_focus != null && _focus.CanInteract)
+
+            if (wanted != null && _carryAnchor != null)
             {
-                _focus.Interact(this);
+                wanted.Unstow();
+                wanted.AttachTo(_carryAnchor);
+                _carried = wanted;
             }
         }
 
         private string BuildPrompt()
         {
-            if (_carried != null)
-            {
-                return $"[{useKey}] Put down {_carried.DisplayName}";
-            }
-
             if (_focus != null && _focus.CanInteract)
             {
+                if (_focus is Carryable && _inventory.IsFull)
+                {
+                    return "Your hands are full";
+                }
                 return $"[{useKey}] {_focus.Prompt}";
+            }
+
+            if (_carried != null)
+            {
+                return $"[{dropKey}] Put down {_carried.DisplayName}";
             }
 
             return null;
@@ -111,7 +181,11 @@ namespace Freedome.Interaction
             return hit.collider.GetComponentInParent<Interactable>();
         }
 
-        /// <summary>Picks up an item, swapping it for whatever is already held.</summary>
+        /// <summary>
+        /// Takes an item into the inventory and puts it straight into the hand, which
+        /// is what "pick it up" should feel like. Silently does nothing when full -
+        /// the prompt has already said so.
+        /// </summary>
         public void TryCarry(Carryable item)
         {
             if (item == null || _carryAnchor == null || item == _carried)
@@ -119,13 +193,15 @@ namespace Freedome.Interaction
                 return;
             }
 
-            if (_carried != null)
+            if (!_inventory.Add(item))
             {
-                Drop();
+                return;
             }
 
-            _carried = item;
-            item.AttachTo(_carryAnchor);
+            // Stow it first so the selection change below has something consistent to
+            // pick up, whatever was previously in hand.
+            item.Stow(_stowPoint);
+            _inventory.Select(_inventory.Count - 1);
         }
 
         public void Drop()
@@ -150,8 +226,12 @@ namespace Freedome.Interaction
                 target = transform.position + (Vector3.up * 0.12f);
             }
 
-            _carried.Release(target);
+            Carryable dropped = _carried;
             _carried = null;
+
+            _inventory.Remove(dropped);
+            dropped.Unstow();
+            dropped.Release(target);
         }
     }
 }

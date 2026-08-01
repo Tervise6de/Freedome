@@ -35,7 +35,7 @@ frighten anyone.
 | Roof | 22 degree gable, ridge at 3.26 m, exposed rafters |
 | Target | Windows 64-bit, 1920 x 1080, 60 fps on a mid-to-high-end PC |
 | Engine | Unity 6 (6000.0 LTS) + High Definition Render Pipeline |
-| Controls | WASD, mouse look, Ctrl/C to crouch, E to use or carry, Esc to pause |
+| Controls | WASD, mouse look, Ctrl/C to crouch, E to use or take, 1-6 to hold, G to put down, Esc to pause |
 
 ![Floor plan](docs/diagrams/floor_plan.svg)
 
@@ -148,13 +148,17 @@ docs                       design documents, drawings, screenshots
 Implemented: first-person movement, mouse look, crouch, collision, gravity,
 pause menu, graphics settings, restart, a packaged Windows build pipeline, and
 a small amount of physical interaction - the door and the floor panel swing on
-their hinges, the switch by the door works, and five loose objects can be
-picked up and put down.
+their hinges, the bench drawers slide open with things inside them, the switch
+by the door works, and loose objects can be taken into a six-slot inventory and
+put back down.
 
-Deliberately **not** implemented, and not to be added: timer, game-over,
-inventory UI, object combination, AI, escape-route logic, puzzles, journal,
-narrative clues, dialogue, save system, combat, multiplayer, runtime generative
-AI, procedural puzzle generation.
+Deliberately **not** implemented, and not to be added: timer, game-over, object
+combination, AI, escape-route logic, puzzles, journal, narrative clues,
+dialogue, save system, combat, multiplayer, runtime generative AI, procedural
+puzzle generation.
+
+The inventory is a container and nothing more. No item has an effect, none can
+be combined, none is required, nothing is counted or scored.
 
 The line the interaction holds: **an interactable does something physical to
 itself and nothing else.** Nothing sets a flag, unlocks anything, counts,

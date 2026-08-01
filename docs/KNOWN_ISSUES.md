@@ -35,7 +35,7 @@ Consequently:
   intent, not a measurement.
 - **No Windows build has been produced.** `Builds/Windows/ShedRoomDemo/` is
   empty.
-- **No test has run in Unity.** 39 of them run outside it; see the compile check
+- **No test has run in Unity.** 41 of them run outside it; see the compile check
   below.
 - **Nothing has been interacted with.** No door has opened, no object has been
   picked up, and no dropped rigidbody has landed on anything.
@@ -50,7 +50,7 @@ What *was* verified, by four independent passes:
   viewpoints. Confirmed that the framing, roof structure, openings and prop
   placement read correctly, and caught three more real defects in the C#.
 - **Compile check** (`./Tools/compile_check.sh`) - all 9,000 lines type-checked
-  with Roslyn against hand-written Unity stand-ins, plus 31 of the 35 EditMode
+  with Roslyn against hand-written Unity stand-ins, plus 41 of the 45 EditMode
   tests actually executed. Caught five defects, two of them hard compile
   failures. See [Tools/CompileCheck/README.md](../Tools/CompileCheck/README.md).
 - **HDRP API check** (`./Tools/verify_hdrp_api.sh`) - every HDRP symbol the
@@ -174,6 +174,15 @@ things to look at first, in order:
   Whether the probe volume actually covers where a carried object goes is
   unknown.
 
+- **Do the drawers behave?** They slide 300 mm out into the room on the -X axis.
+  Nothing has checked that against the player's own collider standing at the
+  bench, or that the drawer box clears the carcass it sits in.
+- **Does stowing survive?** Taking an object into the inventory deactivates its
+  GameObject and reparents it under the player. Deactivating a rigidbody
+  mid-scene and waking it up somewhere else is exactly where physics surprises
+  live, and an object taken out of a drawer that is then shut has never been
+  tried.
+
 The arithmetic that *is* checked - hinge offsets, carryable placements, reach -
 is in `InteractionTests`, and it caught one real fault already: a jar of fixings
 placed 350 mm in front of the bench, at bench height, in mid-air.
@@ -288,6 +297,7 @@ Recorded because the method that caught them is worth repeating.
 | Gable prism left triangular gaps at the top corners | Geometry review | Extended past the wall face by the full wall thickness |
 | Gable sheathing stopped at the rafter underside, leaving an open slot the full length of both gable rakes | Preview render 03 - sky visible through the roof junction | Taken up to `RoofBuilder.TroughY` instead, matching the eaves blocking |
 | Window sill board's top face was coplanar with the framing sill trimmer | Preview render 08 - z-fighting speckle right where the player leans in | Sill board now sits on the trimmer rather than flush with it |
+| The ridge cap wings stopped 3.2 mm short of the centreline each, leaving a 6.5 mm slot straight through the apex for the full 6.9 m of the ridge - daylight down the middle of the ceiling, and rain into the room | Reading `RoofBuilder.BuildCovering` | Wings moved 10 mm up the slope so they lap 12 mm across the apex. `RidgeCapClosesTheApex` and `RidgeCapStillCoversTheSheetEdge` pin it |
 | Top-shelf sack used the tarpaulin material, so a bag of feed read as a folded blue groundsheet | Preview render 02 | Switched to the card material - a paper sack |
 | Wood grain ran across every horizontal member instead of along it. UVs projected against each face's dominant world axis, and the side of a top plate faces sideways whichever way the plate runs, so V ended up vertical on plates, rafters, purlins, collar ties, noggins and bench rails | Reading `MeshBuilder.PlanarUv` against what `SamplePine` actually generates | `MeshBuilder` now derives the UV frame from a grain direction: V follows the piece's own longest axis, carried through its rotation, with `GrainOverride` for materials that have a direction the geometry does not imply |
 | `[MenuItem("...", priority = N)]` on all eight menu entries. Unity's `priority` is an internal field, so a named attribute argument cannot bind to it - this is a hard compile error, and it took out every entry point to the project's tooling | Compile check | Changed to the positional form, `[MenuItem("...", false, N)]` |

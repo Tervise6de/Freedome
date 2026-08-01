@@ -29,10 +29,9 @@ that nobody knows yet.
 
 Do **not** add, even if it seems obviously useful:
 
-countdown timer, game-over, inventory UI, object combination, kidnapper AI,
-escape-route logic, puzzles, evidence journal, narrative clues, dialogue, save
-system, combat, multiplayer, runtime generative AI, procedural puzzle
-generation.
+countdown timer, game-over, object combination, kidnapper AI, escape-route
+logic, puzzles, evidence journal, narrative clues, dialogue, save system,
+combat, multiplayer, runtime generative AI, procedural puzzle generation.
 
 ### What interaction is allowed to be
 
@@ -47,8 +46,11 @@ flag, unlocks something, counts, scores, completes, reveals, or is *required*.
 The moment one object's state changes what another object does, this stops
 being an environment.
 
-Carry is one item at a time, held and dropped. No inventory, no stacking, no
-combining, no throwing.
+Carry goes through a six-slot inventory: pick up, select a slot to hold it,
+drop it back into the room. The inventory is a **container and nothing more** -
+no item has an effect, none can be combined, none is required, nothing is
+counted or scored, and nothing persists past the session. Still no stacking and
+no throwing.
 
 The affordances in [docs/FUTURE_GAMEPLAY_HOOKS.md](docs/FUTURE_GAMEPLAY_HOOKS.md)
 may now move, but they still may not be **signposted**: no highlights, no

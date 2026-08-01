@@ -18,6 +18,10 @@ namespace Freedome.Interaction
         [SerializeField] private Vector3 holdOffset = new Vector3(0.28f, -0.20f, 0.52f);
         [SerializeField] private Vector3 holdEuler = Vector3.zero;
 
+        // Serialized, not a plain field: the generator sets this at build time and
+        // it has to survive being written into the scene and loaded back.
+        [SerializeField] private bool restingInContainer;
+
         private Rigidbody _body;
         private Transform _originalParent;
 
@@ -52,6 +56,24 @@ namespace Freedome.Interaction
         {
             _body = GetComponent<Rigidbody>();
             _originalParent = transform.parent;
+
+            if (restingInContainer)
+            {
+                // Kinematic so it rides the drawer rather than being dragged through
+                // the drawer bottom by physics every time the drawer moves. It becomes
+                // an ordinary dynamic body the first time it is put down.
+                _body.isKinematic = true;
+                _body.useGravity = false;
+            }
+        }
+
+        /// <summary>
+        /// Marks an object as sitting inside something that moves - a drawer. Set by
+        /// the generator before the scene is saved.
+        /// </summary>
+        public void SetRestingInContainer(bool resting)
+        {
+            restingInContainer = resting;
         }
 
         public override void Interact(PlayerInteractor actor)
@@ -62,6 +84,7 @@ namespace Freedome.Interaction
         /// <summary>Called by the interactor. Not a general-purpose API.</summary>
         internal void AttachTo(Transform anchor)
         {
+            gameObject.SetActive(true);
             IsHeld = true;
 
             // Kinematic while carried. A held rigidbody driven by physics fights the
@@ -76,8 +99,32 @@ namespace Freedome.Interaction
             transform.localRotation = Quaternion.Euler(holdEuler);
         }
 
+        /// <summary>
+        /// Put out of sight in the inventory. The object is kept, not destroyed -
+        /// it is the same tin of screws when it comes back out.
+        /// </summary>
+        internal void Stow(Transform holder)
+        {
+            IsHeld = false;
+            _body.isKinematic = true;
+            _body.useGravity = false;
+            _body.detectCollisions = false;
+
+            transform.SetParent(holder, false);
+            transform.localPosition = Vector3.zero;
+            gameObject.SetActive(false);
+        }
+
+        internal void Unstow()
+        {
+            gameObject.SetActive(true);
+        }
+
         internal void Release(Vector3 position)
         {
+            // Once it has been handled it is loose, wherever it started.
+            restingInContainer = false;
+
             transform.SetParent(_originalParent, true);
             transform.position = position;
 

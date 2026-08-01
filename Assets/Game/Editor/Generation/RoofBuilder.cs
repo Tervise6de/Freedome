@@ -22,6 +22,24 @@ namespace Freedome.EditorTools.Generation
         public const float PurlinWidth = 0.070f;     // measured along the slope
         public const float CorrugationPitch = 0.076f;
         public const float CorrugationAmplitude = 0.016f;
+
+        /// <summary>Ridge cap wing, measured along the slope.</summary>
+        public const float CapWidth = 0.300f;
+
+        /// <summary>
+        /// Distance down the slope from the ridge board to the centre of the cap
+        /// wing. Must be small enough that the wing's inner edge crosses the
+        /// centreline; <c>RidgeCapClosesTheApex</c> is what keeps it honest.
+        /// </summary>
+        public const float CapCentreOffset = 0.130f;
+
+        /// <summary>
+        /// Signed x of the cap wing's inner edge, for the +x side. Negative means it
+        /// has crossed the apex and the two wings overlap, which is what closing the
+        /// ridge requires. Shared with the tests rather than recomputed there.
+        /// </summary>
+        public static float RidgeCapInnerEdgeX =>
+            RidgeOffset + ((CapCentreOffset - (CapWidth * 0.5f)) * CosTheta);
         public const float BargeThickness = 0.019f;
         public const float FasciaHeight = 0.140f;
 
@@ -197,16 +215,26 @@ namespace Freedome.EditorTools.Generation
                                       CorrugationPitch, CorrugationAmplitude, 0);
             }
 
-            // Ridge capping, folded over the apex.
+            // Ridge capping: two wings, one lying in each slope plane, meeting over
+            // the apex the way a folded cap does.
+            //
+            // The inner edge has to cross x = 0, not merely reach the ridge board.
+            // The sheets stop at ridgeStart, which is half the ridge board's
+            // thickness out from the centreline, so the cap is the only thing
+            // closing that slot. At the previous 0.14 m the wings stopped 3.2 mm
+            // short of the centreline each, leaving a 6.5 mm gap straight through
+            // the roof for the whole 6.9 m of the ridge - a hard line of daylight
+            // down the apex. CapCentreOffset is what closes it, with 12 mm of
+            // overlap so the two wings interpenetrate slightly at the fold.
             for (int side = -1; side <= 1; side += 2)
             {
                 Vector3 n = SlopeNormal(side);
                 Vector3 alongSlope = new Vector3(side * CosTheta, -Mathf.Sin(Theta), 0f);
                 Vector3 ridgeStart = new Vector3(side * RidgeOffset, UndersideY(RidgeOffset), 0f);
-                Vector3 centre = ridgeStart + (alongSlope * 0.14f)
+                Vector3 centre = ridgeStart + (alongSlope * CapCentreOffset)
                                  + (n * (Dim.RafterDepth + PurlinThickness + CorrugationAmplitude + 0.004f));
 
-                mb.AddBox(centre, new Vector3(0.30f, 0.006f, RoofHalfLength * 2f),
+                mb.AddBox(centre, new Vector3(CapWidth, 0.006f, RoofHalfLength * 2f),
                           SlopeRotation(side), 0, 0.002f);
             }
 

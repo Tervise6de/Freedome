@@ -308,6 +308,42 @@ namespace Freedome.Tests.EditMode
                 "the panel was not split around the opening");
         }
 
+        // ------------------------------------------------------------------
+        // Roof closure
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void RidgeCapClosesTheApex()
+        {
+            // The corrugated sheets stop at the ridge board, so the two cap wings are
+            // the only thing covering the slot between them. Each wing's inner edge
+            // has to cross the centreline, not merely reach the board: at the
+            // original offset they stopped 3.2 mm short each, leaving 6.5 mm of open
+            // sky down the entire 6.9 m ridge.
+            float innerEdgeX = RoofBuilder.RidgeCapInnerEdgeX;
+
+            Assert.Less(innerEdgeX, 0f,
+                $"the ridge cap stops {innerEdgeX * 1000f:0.0} mm short of the centreline, " +
+                "so there is a slot straight through the roof");
+
+            // And it has to lap far enough to survive the mesh being chamfered.
+            Assert.Less(innerEdgeX, -0.004f,
+                $"the cap wings only overlap {-innerEdgeX * 2000f:0.0} mm, which is inside " +
+                "the chamfer and may still show light");
+        }
+
+        [Test]
+        public void RidgeCapStillCoversTheSheetEdge()
+        {
+            // Closing the apex must not be done by sliding the cap up the roof until
+            // its outer edge no longer laps the sheeting it is supposed to weather.
+            float outerAlongSlope = RoofBuilder.CapCentreOffset + (RoofBuilder.CapWidth * 0.5f);
+
+            Assert.Greater(outerAlongSlope, 0.20f,
+                $"the cap only reaches {outerAlongSlope * 1000f:0} mm down the slope, " +
+                "which is not enough lap over the sheet");
+        }
+
         private static Bounds UvBounds(Mesh mesh)
         {
             Vector2[] uvs = mesh.uv;

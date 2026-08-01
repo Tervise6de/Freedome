@@ -164,8 +164,10 @@ namespace Freedome.EditorTools.Generation
             player.AddComponent<FirstPersonController>();
             player.AddComponent<PlayerLook>();
             player.AddComponent<HeadBob>();
+            player.AddComponent<PlayerInventory>();
             player.AddComponent<PlayerInteractor>();
             player.AddComponent<InteractionHud>();
+            player.AddComponent<InventoryHud>();
         }
 
         /// <summary>

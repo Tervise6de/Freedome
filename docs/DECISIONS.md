@@ -304,3 +304,52 @@ caught one placement error - a jar of fixings floating 350 mm in front of the
 bench - but arithmetic cannot tell you whether a door opening outward hits the
 timber stacked against the wall, or whether a dropped paint tin settles or
 jitters.
+
+
+---
+
+## An inventory, after saying there would not be one
+
+**Decision.** Six slots. Picking something up takes it into the inventory and
+into the hand; number keys select which slot is held; G puts the held object
+back into the room.
+
+**This reverses the line written two commits earlier**, which said "one item at
+a time, held and dropped. No inventory." Requested directly. Recording it
+because the reversal is the second in a row, and a reader deserves to see that
+the boundary has moved twice rather than find two documents disagreeing.
+
+**What did not move with it.** The inventory is a container. No item has an
+effect, none can be combined with another, none is required, nothing is counted,
+scored, or persisted. There is still no objective in this project. The UI shows
+a number and a name - no icons, no weights, no rarity - because a richer one
+would imply rules that do not exist.
+
+**What it cost.** `Carryable` gained stow/unstow and a serialised
+`restingInContainer` flag, and `PlayerInteractor` now routes every pickup
+through `PlayerInventory` rather than holding a single reference. Stowed objects
+are deactivated and parented under the player, so the scene hierarchy still
+records who is holding what.
+
+**Still unverified, like all of it.** Nothing has run. In particular: whether
+deactivating a rigidbody mid-scene and reactivating it elsewhere behaves, and
+whether an object taken out of a drawer that is then closed ends up somewhere
+sensible.
+
+---
+
+## The ridge cap did not close
+
+**Found** by reading the roof covering while looking for something else.
+
+The corrugated sheets stop at the ridge board, so the two cap wings are the only
+thing covering the slot between them. Each wing reached 3.2 mm short of the
+centreline, leaving **6.5 mm of open sky running the full 6.9 m of the ridge** -
+a hard line of daylight down the apex of the ceiling, and rain into the middle
+of the room.
+
+Fixed by moving the wings 10 mm further up the slope so they overlap by 12 mm
+across the apex. `RidgeCapClosesTheApex` now asserts the inner edge crosses
+x = 0, with margin for the chamfer, and `RidgeCapStillCoversTheSheetEdge`
+stops the fix being made by sliding the cap up until it no longer laps the
+sheeting.

@@ -1,4 +1,5 @@
 using UnityEngine;
+using Freedome.Interaction;
 using Dim = Freedome.Environment.ShedDimensions;
 using Keys = Freedome.EditorTools.Generation.ShedMaterialLibrary.Keys;
 
@@ -76,7 +77,8 @@ namespace Freedome.EditorTools.Generation
                       new Vector3(d - 0.10f, Dim.BoardThickness, l - 0.20f), 0, 0.003f);
 
             // --- drawer bank at the far end -----------------------------------
-            BuildDrawerBank(mb, new Vector3(0f, 0f, halfL - 0.34f), d, legTop);
+            Vector3 benchOrigin = new Vector3(Dim.BenchFrontX + halfD, 0f, Dim.BenchStartZ + halfL);
+            BuildDrawerBank(ctx, parent, mb, new Vector3(0f, 0f, halfL - 0.34f), d, legTop, benchOrigin);
 
             // --- small cupboard at the near end -------------------------------
             BuildCupboard(mb, new Vector3(0f, 0f, -halfL + 0.36f), d, legTop);
@@ -91,7 +93,15 @@ namespace Freedome.EditorTools.Generation
                 Quaternion.identity, BuildContext.ColliderKind.Box);
         }
 
-        private static void BuildDrawerBank(MeshBuilder mb, Vector3 centre, float depth, float legTop)
+        /// <summary>
+        /// The carcass stays in the shared bench mesh; the two drawers come out as
+        /// their own objects because they slide. Each is a real box - bottom, sides,
+        /// back and front - rather than a face, so that what is inside it reads as
+        /// being inside something.
+        /// </summary>
+        private static void BuildDrawerBank(BuildContext ctx, Transform parent, MeshBuilder mb,
+                                            Vector3 centre, float depth, float legTop,
+                                            Vector3 benchOrigin)
         {
             const float BankWidth = 0.62f;  // along Z
             float carcassTop = legTop - 0.10f;
@@ -108,20 +118,119 @@ namespace Freedome.EditorTools.Generation
                           new Vector3(d, height, Dim.BoardThickness), 0, 0.002f);
             }
 
-            // Two drawer fronts with a shadow gap between them.
+            mb.Pop();
+
             for (int i = 0; i < 2; i++)
             {
                 float fh = (height - 0.014f) * 0.5f;
                 float fy = carcassBottom + (fh * 0.5f) + (i * (fh + 0.010f)) + 0.002f;
-                mb.AddBox(new Vector3(-(d * 0.5f) - 0.009f, fy, 0f),
-                          new Vector3(0.018f, fh - 0.006f, BankWidth - 0.012f), 0, 0.003f);
 
-                // Turned timber knob.
-                mb.AddCylinder(new Vector3(-(d * 0.5f) - 0.030f, fy, 0f),
-                               0.016f, 0.020f, 0.030f, 12, 0, Quaternion.Euler(0f, 0f, 90f));
+                // The front's centre, in world space: bench origin, plus the bank's
+                // offset inside the bench, plus the front's offset inside the bank.
+                Vector3 frontCentre = benchOrigin + centre +
+                                      new Vector3(-(d * 0.5f) - 0.009f, fy, 0f);
+
+                BuildDrawer(ctx, parent, i, frontCentre, d, fh, BankWidth);
+            }
+        }
+
+        private static void BuildDrawer(BuildContext ctx, Transform parent, int index,
+                                        Vector3 frontCentre, float carcassDepth,
+                                        float frontHeight, float bankWidth)
+        {
+            // 0 pine, 1 hardware
+            MeshBuilder mb = new MeshBuilder($"Drawer_{index}", 2);
+
+            float innerW = bankWidth - 0.030f;
+            float boxDepth = carcassDepth - 0.030f;
+            float boxHeight = frontHeight - 0.020f;
+
+            // Front, standing at local x = 0 so the pivot is the face the player sees.
+            mb.AddBox(Vector3.zero, new Vector3(0.018f, frontHeight - 0.006f, bankWidth - 0.012f),
+                      0, 0.003f);
+
+            // Turned timber knob.
+            mb.AddCylinder(new Vector3(-0.021f, 0f, 0f), 0.016f, 0.020f, 0.030f, 12, 0,
+                           Quaternion.Euler(0f, 0f, 90f));
+
+            // The box behind it: bottom, two sides, back.
+            float mid = (boxDepth * 0.5f) + 0.012f;
+            mb.AddBox(new Vector3(mid, -(boxHeight * 0.5f), 0f),
+                      new Vector3(boxDepth, Dim.BoardThickness * 0.6f, innerW), 0, 0.002f);
+            foreach (int sz in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(mid, 0f, sz * (innerW * 0.5f)),
+                          new Vector3(boxDepth, boxHeight, Dim.BoardThickness * 0.6f), 0, 0.002f);
+            }
+            mb.AddBox(new Vector3(mid + (boxDepth * 0.5f), 0f, 0f),
+                      new Vector3(Dim.BoardThickness * 0.6f, boxHeight, innerW), 0, 0.002f);
+
+            GameObject drawer = ctx.CreateObject($"Drawer_{index}", mb,
+                new[] { Keys.StructuralPine, Keys.Hardware },
+                parent, frontCentre, Quaternion.identity,
+                BuildContext.ColliderKind.Box, isStatic: false);
+
+            if (drawer == null)
+            {
+                return;
             }
 
-            mb.Pop();
+            // Pulls out into the room, which for the workbench wall is -X.
+            SlidingPart slide = drawer.AddComponent<SlidingPart>();
+            slide.Configure("Open the drawer", "Close the drawer", Vector3.left, 0.30f, 0.55f);
+
+            BuildDrawerContents(ctx, drawer.transform, index, mid, boxHeight);
+        }
+
+        /// <summary>
+        /// What is in the drawers. A tin of screws in one, a folding rule in the
+        /// other - both carryable, both kinematic until first handled so they ride
+        /// the drawer instead of being shoved through its bottom.
+        /// </summary>
+        private static void BuildDrawerContents(BuildContext ctx, Transform drawer, int index,
+                                                float boxMidX, float boxHeight)
+        {
+            float restY = -(boxHeight * 0.5f) + 0.012f;
+
+            if (index == 0)
+            {
+                MeshBuilder mb = new MeshBuilder("Carry_ScrewTin", 2);
+                PropLibrary.FixingsJar(mb, Vector3.zero, 0.070f, 0.048f, 0, 1);
+                Attach(ctx, mb, "Carry_ScrewTin", new[] { Keys.Hardware, Keys.DarkSteel },
+                       drawer, new Vector3(boxMidX - 0.05f, restY, -0.10f),
+                       "tin of screws", 0.5f, new Vector3(0.22f, -0.18f, 0.36f));
+            }
+            else
+            {
+                MeshBuilder mb = new MeshBuilder("Carry_FoldingRule", 1);
+                PropLibrary.Timber(mb, Vector3.zero, new Vector3(0.230f, 0.012f, 0.028f),
+                                   Quaternion.identity, 0);
+                Attach(ctx, mb, "Carry_FoldingRule", new[] { Keys.StructuralPine },
+                       drawer, new Vector3(boxMidX, restY + 0.006f, 0.06f),
+                       "folding rule", 0.2f, new Vector3(0.24f, -0.20f, 0.40f));
+            }
+        }
+
+        private static void Attach(BuildContext ctx, MeshBuilder mb, string name, string[] materials,
+                                   Transform drawer, Vector3 localPosition, string displayName,
+                                   float mass, Vector3 holdOffset)
+        {
+            GameObject go = ctx.CreateObject(name, mb, materials, drawer, localPosition,
+                                             Quaternion.identity,
+                                             BuildContext.ColliderKind.Box, isStatic: false);
+            if (go == null)
+            {
+                return;
+            }
+
+            Rigidbody body = go.AddComponent<Rigidbody>();
+            body.mass = mass;
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            body.interpolation = RigidbodyInterpolation.Interpolate;
+
+            Carryable carry = go.AddComponent<Carryable>();
+            carry.Configure(displayName, holdOffset, Vector3.zero);
+            carry.SetRestingInContainer(true);
         }
 
         private static void BuildCupboard(MeshBuilder mb, Vector3 centre, float depth, float legTop)
