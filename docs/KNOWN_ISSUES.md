@@ -148,8 +148,11 @@ sink by a few millimetres. Screenshot 7 exists specifically to catch this.
 
 ### 9. `ProjectVersion.txt`
 
-**Risk: low, cosmetic.** `6000.0.58f1` was written without a Unity install to
-confirm the patch number. Any 6000.0.x opens the project with an upgrade prompt.
+**Resolved.** `6000.0.58f1` was originally a guess. It has since been checked
+against the list of released editor builds (via the GameCI image tags, which are
+published per real Unity release) and it is a genuine 6000.0 patch - one of 79.
+The invented revision hash that sat beside it has been removed, since a wrong
+one can stop Unity Hub locating the install.
 
 ### 10. Legacy input assumption
 

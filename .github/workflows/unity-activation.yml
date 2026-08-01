@@ -1,0 +1,48 @@
+# Step 1 of getting a Unity licence without a desktop machine.
+#
+# Unity's manual activation needs a .alf request file, which the editor can
+# produce *without* being licensed - that is the whole point of it. This
+# workflow runs that step and hands you the .alf as a downloadable artifact.
+#
+# You then upload the .alf at https://license.unity3d.com/manual, get a .ulf
+# back, and paste its contents into a repository secret named UNITY_LICENSE.
+# Every one of those steps works in a mobile browser.
+#
+# See docs/BUILDING_FROM_A_PHONE.md for the walkthrough.
+#
+# Manual trigger only. Nothing here runs on push.
+
+name: Unity - request activation file
+
+on:
+  workflow_dispatch:
+    inputs:
+      unityVersion:
+        description: "Unity version to request the licence for"
+        required: true
+        default: "6000.0.58f1"
+
+jobs:
+  request:
+    name: Request activation file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request .alf from Unity
+        uses: game-ci/unity-request-activation-file@v2
+        id: request
+        with:
+          unityVersion: ${{ inputs.unityVersion }}
+
+      - name: Upload the .alf
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-activation-file
+          path: ${{ steps.request.outputs.filePath }}
+          retention-days: 7
+
+      - name: What to do next
+        run: |
+          echo "Download the 'unity-activation-file' artifact from this run."
+          echo "Unzip it and upload the .alf at https://license.unity3d.com/manual"
+          echo "Save the .ulf you get back as a repository secret: UNITY_LICENSE"
+          echo "Then run the 'Unity - build and test' workflow."

@@ -124,6 +124,7 @@ docs                       design documents, drawings, screenshots
 | [docs/BUILD_REPORT.md](docs/BUILD_REPORT.md) | Build path, procedure and results |
 | [docs/previews/README.md](docs/previews/README.md) | Software-rasterised preview renders - what they are, and what they are not |
 | [docs/RUNNING_IN_CLOUD.md](docs/RUNNING_IN_CLOUD.md) | Getting Unity running in a cloud session, and which acceptance criteria that would actually close |
+| [docs/BUILDING_FROM_A_PHONE.md](docs/BUILDING_FROM_A_PHONE.md) | Compiling, testing and building via GitHub Actions with no desktop machine |
 | [TASKS.md](TASKS.md) | The milestone checklist and its real status |
 
 ## Scope

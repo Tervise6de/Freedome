@@ -1,0 +1,117 @@
+# Compiles the project, runs the EditMode tests, generates the scene and builds
+# the Windows player - all on a GitHub runner, which unlike a Claude Code cloud
+# session has unrestricted network access and so can reach packages.unity.com
+# for HDRP.
+#
+# Requires a UNITY_LICENSE repository secret. Get one with the
+# "Unity - request activation file" workflow; see docs/BUILDING_FROM_A_PHONE.md.
+#
+# What this does and does not close:
+#   compiles the C#          - the single biggest unverified risk in the project
+#   EditMode tests           - yes
+#   lighting bake            - optional, CPU lightmapper, slow
+#   Windows build            - yes (criterion 1 "produced"; "launches" needs Windows)
+#   screenshots              - no. Runners have no GPU
+#   performance figures      - no, and they would be meaningless if they existed
+#
+# Manual trigger only. Nothing here runs on push, so it cannot burn Actions
+# minutes by accident.
+
+name: Unity - build and test
+
+on:
+  workflow_dispatch:
+    inputs:
+      bakeLighting:
+        description: "Bake lighting before building (much slower)"
+        type: boolean
+        default: false
+      runTests:
+        description: "Run the EditMode tests"
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    name: Generate, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      # GameCI's editor images are 12-15 GB and a stock runner has about 14 GB
+      # free on /. Without this the image pull fails part way through.
+      - name: Free disk space
+        run: |
+          echo "before:"; df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean || true
+          echo "after:"; df -h / | tail -1
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      # The Library folder is expensive to rebuild - it holds the imported HDRP
+      # package and every generated asset - so it is worth caching between runs.
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Packages/manifest.json', 'Assets/Game/**/*.cs') }}
+          restore-keys: |
+            Library-
+
+      - name: EditMode tests
+        if: ${{ inputs.runTests }}
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          testMode: editmode
+          artifactsPath: test-results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: EditMode results
+        continue-on-error: true
+
+      - name: Upload test results
+        if: ${{ inputs.runTests }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 14
+        continue-on-error: true
+
+      # PerformBuild configures project settings, regenerates the scene when it
+      # is absent (it always is - the scene is generated, not committed), runs
+      # the validator, and refuses to build if the validator reports errors.
+      - name: Build Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          targetPlatform: StandaloneWindows64
+          buildMethod: Freedome.EditorTools.Build.WindowsBuild.PerformBuild
+          allowDirtyBuild: true
+          customParameters: >-
+            -regenerate
+            ${{ inputs.bakeLighting && '-bakeLighting' || '' }}
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShedRoomDemo-Windows
+          path: Builds/Windows/ShedRoomDemo
+          retention-days: 14
+
+      - name: Upload editor logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-logs
+          path: |
+            Builds/Windows/*.log
+            /home/runner/.config/unity3d/Editor.log
+          retention-days: 7
+        continue-on-error: true
