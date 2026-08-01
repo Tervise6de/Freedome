@@ -14,11 +14,20 @@ namespace Freedome.Environment
     ///
     /// It is written to be silent in normal play. If it ever fires during testing,
     /// that is a bug in the collision, not a feature.
+    ///
+    /// The area is the shed plus a small apron outside the entrance. The apron
+    /// exists because the door opens: before that, stepping outside was by
+    /// definition a collision fault, and the backstop treated it as one. Walking
+    /// out of an open door is now ordinary, so the boundary has to allow it - and
+    /// it is still the thing that stops anyone wandering off across the ground
+    /// plane.
     /// </summary>
     public sealed class PlayAreaBoundary : MonoBehaviour
     {
         [SerializeField] private FirstPersonController player;
         [SerializeField] private float margin = 0.35f;
+        [SerializeField] private float apronDepth = 2.20f;
+        [SerializeField] private float apronHalfWidth = 1.60f;
         [SerializeField] private float floorTolerance = 1.0f;
         [SerializeField] private float ceilingTolerance = 1.5f;
 
@@ -57,13 +66,38 @@ namespace Freedome.Environment
 
         public bool IsInside(Vector3 position)
         {
+            if (position.y <= -floorTolerance ||
+                position.y >= ShedDimensions.RidgeHeight + ceilingTolerance)
+            {
+                return false;
+            }
+
             float halfWidth = ShedDimensions.HalfWidth + margin;
             float halfLength = ShedDimensions.HalfLength + margin;
 
-            return position.x > -halfWidth && position.x < halfWidth
-                   && position.z > -halfLength && position.z < halfLength
-                   && position.y > -floorTolerance
-                   && position.y < ShedDimensions.RidgeHeight + ceilingTolerance;
+            bool inShed = position.x > -halfWidth && position.x < halfWidth
+                          && position.z > -halfLength && position.z < halfLength;
+
+            return inShed || IsOnEntranceApron(position);
         }
+
+        /// <summary>
+        /// The patch of ground immediately outside the door. Sized so somebody who
+        /// walks out can turn round and look back at the shed, and no further.
+        /// </summary>
+        public bool IsOnEntranceApron(Vector3 position)
+        {
+            float nearZ = -(ShedDimensions.HalfLength + margin);
+
+            return position.z <= nearZ
+                   && position.z > nearZ - apronDepth
+                   && position.x > ShedDimensions.DoorCentreX - apronHalfWidth
+                   && position.x < ShedDimensions.DoorCentreX + apronHalfWidth;
+        }
+
+        /// <summary>Centre of the apron, so the light probes can be put over it.</summary>
+        public static Vector3 ApronCentre(float depth = 2.20f) =>
+            new Vector3(ShedDimensions.DoorCentreX, 0f,
+                        -(ShedDimensions.HalfLength + 0.35f) - (depth * 0.5f));
     }
 }

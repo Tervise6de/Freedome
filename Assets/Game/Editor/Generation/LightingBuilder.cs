@@ -447,6 +447,22 @@ namespace Freedome.EditorTools.Generation
                 positions.Add(new Vector3(Dim.DoorCentreX, y, -Dim.HalfLength + 0.4f));
             }
 
+            // Outside the door. The door opens now, so a carried object can leave
+            // the building - and probe interpolation is only defined inside the hull
+            // of the probes, so without these an object taken outside would keep
+            // sampling interior lighting while standing in daylight.
+            float apronNearZ = -(Dim.HalfLength + 0.35f);
+            for (float z = apronNearZ; z >= apronNearZ - 2.2f; z -= 1.1f)
+            {
+                for (float x = Dim.DoorCentreX - 1.4f; x <= Dim.DoorCentreX + 1.41f; x += 1.4f)
+                {
+                    foreach (float y in new[] { 0.25f, 1.10f, 2.00f })
+                    {
+                        positions.Add(new Vector3(x, y, z));
+                    }
+                }
+            }
+
             group.probePositions = positions.ToArray();
             BuildContext.MarkStatic(go);
         }

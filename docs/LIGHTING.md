@@ -222,3 +222,31 @@ In rough order of likelihood that they need adjusting:
    changing light intensities.
 5. **Ceiling lamp.** At 820 lm it should be a visible warm presence, not the
    thing lighting the room. If it dominates, the daylight is too weak.
+
+
+## Lighting things that move
+
+The door leaf, the floor panel, the switch rocker, the window casement and the
+carryables are all non-static. They take no lightmap and are lit by the light
+probe group instead.
+
+Probe interpolation is only defined inside the convex hull of the probes, so the
+grid has to cover everywhere a movable object can go. Two additions:
+
+- **Outside the door.** The door opens, so a carried object can leave the
+  building. Without probes out there it would keep sampling interior lighting
+  while standing in daylight. Three rows now cover the entrance apron.
+- The interior grid already covered carry height, between its 1.10 m and 2.00 m
+  rows.
+
+### Adaptive Probe Volumes were considered and not used
+
+APVs would do this better - automatic placement, denser sampling near geometry,
+no hand-placed grid to keep in step with the room. They are also a change to the
+HDRP asset and the bake pipeline, on a project where nothing has ever rendered a
+frame.
+
+Switching now would mean replacing a probe layout whose failure modes are at
+least legible with one nobody can inspect until the first bake, and it would
+make the first bake harder to debug rather than easier. The probe group is
+adequate and explicit. Revisit once the room has been seen.

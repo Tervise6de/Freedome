@@ -234,6 +234,31 @@ namespace Freedome.Tests.EditMode
         }
 
         [Test]
+        public void TheEntranceApronIsReachableThroughTheOpenDoor()
+        {
+            // The door opens now, so the boundary has to allow the ground just
+            // outside it. Before that, being outside was by definition a collision
+            // fault and the backstop teleported the player to spawn with a warning.
+            PlayAreaBoundary boundary = new PlayAreaBoundary();
+
+            Vector3 justOutside = new Vector3(ShedDimensions.DoorCentreX, 0.1f,
+                                              -ShedDimensions.HalfLength - 0.8f);
+            Assert.IsTrue(boundary.IsOnEntranceApron(justOutside),
+                "the ground immediately outside the door is not in the play area");
+
+            // And it must still stop somewhere.
+            Vector3 wellAway = new Vector3(ShedDimensions.DoorCentreX, 0.1f,
+                                           -ShedDimensions.HalfLength - 6f);
+            Assert.IsFalse(boundary.IsOnEntranceApron(wellAway),
+                "the apron does not end, so the player can walk off across the ground");
+
+            // The apron is in front of the door, not wrapped round the building.
+            Vector3 besideTheShed = new Vector3(ShedDimensions.HalfWidth + 1.5f, 0.1f, 0f);
+            Assert.IsFalse(boundary.IsOnEntranceApron(besideTheShed),
+                "the apron reaches round the side of the shed");
+        }
+
+        [Test]
         public void TheSwitchIsWithinReachOfAStandingPlayer()
         {
             // Reach is 2.2 m from the eye. The switch has to be usable from a spot a
