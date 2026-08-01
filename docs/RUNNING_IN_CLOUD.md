@@ -17,6 +17,47 @@ Cloud session resource limits are 4 vCPUs, 16 GB RAM and 30 GB of disk. The
 documented environment options are network access, environment variables and a
 setup script. There is no hardware tier to pick.
 
+## Routes that were tried and do not work
+
+Recorded so nobody spends time re-discovering them. All verified in a live
+session, not assumed.
+
+### Direct download
+
+`download.unity3d.com`, `public-cdn.cloud.unity3d.com` (Unity Hub),
+`services.unity.com` and `license.unity3d.com` are all rejected at the proxy.
+
+### The Docker route
+
+Worth taking seriously, because Docker Hub **is** on the default allowlist and
+Docker is pre-installed. GameCI publishes complete Unity editor images, and
+`unityci/editor` has 1002 tags for 6000.0.x with Windows Mono support - the
+newest being `ubuntu-6000.0.80f1-windows-mono-3.2.2` at 5.84 GB compressed,
+about 12 GB unpacked, which fits in the 30 GB allowance.
+
+The registry API works: tags list, manifests resolve, auth tokens issue. The
+daemon starts. The pull still fails, and the reason is specific:
+`registry-1.docker.io` serves manifests but 307-redirects blob downloads to
+**`production.cloudfront.docker.com`**, which is not on the allowlist. The list
+contains `production.cloudflare.docker.com` - Cloudflare, not CloudFront - and
+Docker Hub chose the CloudFront edge. So the pull dies on the first blob with
+`Forbidden`. `pkg-containers.githubusercontent.com`, which serves ghcr.io blobs,
+is blocked for the same reason.
+
+### The package registry
+
+This one matters more than the editor, and is easy to miss. HDRP is a registry
+package, not part of the editor install, so even a working editor image cannot
+build this project without it. `packages.unity.com`,
+`download.packages.unity.com` and `package.openupm.com` are all blocked.
+
+### What not to do
+
+`registry.npmjs.org` is allowlisted and does return an entry for
+`com.unity.render-pipelines.high-definition`. It is a squatted name carrying
+npm's `0.0.1-security` placeholder, not Unity's package. Installing it would be
+a supply-chain compromise dressed up as a workaround. Don't.
+
 ## 1. Allow Unity's domains
 
 Currently the environment blocks them - `download.unity3d.com`,
@@ -35,10 +76,15 @@ To change it:
 
    ```
    download.unity3d.com
+   packages.unity.com
    *.unity3d.com
    *.unity.com
    unity.com
    ```
+
+   `packages.unity.com` is the one that is easy to leave out and the one that
+   stops the build dead, because HDRP is fetched from there rather than shipped
+   with the editor.
 
    **Full** also works and allows any domain.
 5. Save, then start a **new** session. Changing allowed hosts rebuilds the
@@ -48,9 +94,12 @@ There is no organization-level allowlist; each environment carries its own.
 
 ## 2. Supply a licence
 
-Unity will not run unlicensed, and activating it means signing in - which the
-project brief rules out and which this repository will not do. Supply your own
-licence file instead:
+**This is the blocker that no network setting removes.** Unity will not run
+unlicensed, activation requires signing in to a Unity account, and this
+repository will not enter your credentials. Even with **Full** network access,
+the run stops here without a licence file from you.
+
+Supply your own licence file instead:
 
 ```bash
 export UNITY_ULF_PATH=/path/to/Unity_lic.ulf     # preferred
