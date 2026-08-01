@@ -89,6 +89,16 @@ namespace Freedome.EditorTools.Generation
             BuildDoorLeaf(ctx, parent);
         }
 
+        /// <summary>
+        /// World X of the door's hinge line. Exposed because a test that re-derives
+        /// this from ShedDimensions is a tautology - it would pass with the door hung
+        /// off its centre, which is exactly the fault worth catching.
+        /// </summary>
+        public static float DoorHingeX => Dim.DoorCentreX - (Dim.DoorLeafWidth * 0.5f);
+
+        /// <summary>The leaf's own offset from that hinge line.</summary>
+        public static float DoorLeafLocalX => Dim.DoorLeafWidth * 0.5f;
+
         private static void BuildDoorLeaf(BuildContext ctx, Transform parent)
         {
             // 0 timber, 1 zinc hardware
@@ -160,15 +170,14 @@ namespace Freedome.EditorTools.Generation
             // The hinge, not the leaf, is what rotates. HingedPart only ever writes a
             // local rotation, so the leaf needs a parent sitting on the hinge line
             // with the leaf offset half its width away from it.
-            float halfLeaf = Dim.DoorLeafWidth * 0.5f;
             GameObject hinge = ctx.CreateGroup("Door_Hinge", parent);
             hinge.transform.localPosition =
-                new Vector3(Dim.DoorCentreX - halfLeaf, 0f, -Dim.HalfLength + leafZ);
+                new Vector3(DoorHingeX, 0f, -Dim.HalfLength + leafZ);
             BuildContext.MarkMovable(hinge);
 
             GameObject leaf = ctx.CreateObject("Door_Leaf", mb,
                 new[] { Keys.StructuralPine, Keys.Hardware },
-                hinge.transform, new Vector3(halfLeaf, 0f, 0f),
+                hinge.transform, new Vector3(DoorLeafLocalX, 0f, 0f),
                 Quaternion.identity, BuildContext.ColliderKind.Box, isStatic: false);
 
             if (leaf != null)

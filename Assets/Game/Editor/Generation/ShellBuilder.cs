@@ -235,6 +235,13 @@ namespace Freedome.EditorTools.Generation
         /// it out - it simply looks like the way you would reach a stop-cock or a
         /// cable run under the floor.
         /// </summary>
+        /// <summary>World Z of the floor panel's hinge line. See DoorHingeX.</summary>
+        public static float ServicePanelHingeZ =>
+            Dim.ServicePanelCentreZ - (Dim.ServicePanelLength * 0.5f);
+
+        /// <summary>The panel's own offset from that hinge line.</summary>
+        public static float ServicePanelLocalZ => Dim.ServicePanelLength * 0.5f;
+
         private static void BuildServicePanel(BuildContext ctx, Transform parent)
         {
             MeshBuilder mb = new MeshBuilder("Shed_ServicePanel", 2);
@@ -276,15 +283,14 @@ namespace Freedome.EditorTools.Generation
             // Hinged along its far edge so it lifts like a floor hatch rather than
             // sliding. Still an ordinary service panel: no marking, no highlight, and
             // nothing under it but joists and the underside of the platform.
-            float halfPanelZ = Dim.ServicePanelLength * 0.5f;
             GameObject hinge = ctx.CreateGroup("ServicePanel_Hinge", parent);
             hinge.transform.localPosition = new Vector3(
-                Dim.ServicePanelCentreX, 0f, Dim.ServicePanelCentreZ - halfPanelZ);
+                Dim.ServicePanelCentreX, 0f, ServicePanelHingeZ);
             BuildContext.MarkMovable(hinge);
 
             GameObject panel = ctx.CreateObject("Shed_ServicePanel", mb,
                 new[] { Keys.Floorboard, Keys.Hardware },
-                hinge.transform, new Vector3(0f, 0f, halfPanelZ),
+                hinge.transform, new Vector3(0f, 0f, ServicePanelLocalZ),
                 Quaternion.identity, BuildContext.ColliderKind.Box, isStatic: false);
 
             if (panel != null)

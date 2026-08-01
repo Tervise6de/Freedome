@@ -98,6 +98,24 @@ and confirmed to fail the run:
 | --- | --- |
 | `ShedDimensions.WallHeight` 2.4 → 3.4 | 2 failures |
 | `MeshBuilder.LongestAxis` always returns `Vector3.right` | 1 failure |
+| Carryable placed outside the room | 1 failure |
+| Carryable floating in mid-air | 1 failure |
+| Carryable blocking the walking aisle | 1 failure |
+| Two carryables in the same spot | 1 failure |
+| Light switch raised out of reach | 2 failures |
+| **Door hung off its centre instead of its hinge edge** | **passed — test was vacuous, now fixed** |
+| **Floor panel hinged through its middle** | **passed — test was vacuous, now fixed** |
+
+The last two are the same lesson as the grain tests, and it is worth stating
+plainly because it keeps recurring: a test that re-derives the value it is
+checking cannot fail. Both hinge tests computed the hinge position from
+`ShedDimensions` and then asserted their own arithmetic — `(C - h) + h == C` —
+which holds no matter what the generator does. They passed with the door hung
+off its centre, which is precisely the fault they were written to catch.
+
+The fix is for the builder to expose the number it actually uses
+(`OpeningsBuilder.DoorHingeX`, `ShellBuilder.ServicePanelHingeZ`) and for the
+test to read that rather than recompute it.
 
 The second one is why `GeometryTests` changed. The three grain tests originally
 asserted against `UvBounds`, which unions every face of the box — and a box has

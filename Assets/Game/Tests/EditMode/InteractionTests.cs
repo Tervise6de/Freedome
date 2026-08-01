@@ -108,17 +108,22 @@ namespace Freedome.Tests.EditMode
         [Test]
         public void DoorHingeSitsOnTheLeafEdgeNotItsCentre()
         {
-            // The generator places the hinge half a leaf-width back from the door
-            // centre, then offsets the leaf the same amount forward. If those two
-            // disagree the door is hung off its middle and sweeps through the frame.
-            float halfLeaf = ShedDimensions.DoorLeafWidth * 0.5f;
-            float hingeX = ShedDimensions.DoorCentreX - halfLeaf;
-            float leafCentreX = hingeX + halfLeaf;
+            // Read from the builder, not re-derived from ShedDimensions. An earlier
+            // version of this test computed the hinge itself and then checked its own
+            // arithmetic - (C - h) + h == C - which is true no matter what the
+            // generator does, and passed happily with the door hung off its centre.
+            float hingeX = OpeningsBuilder.DoorHingeX;
+            float leafLocalX = OpeningsBuilder.DoorLeafLocalX;
 
-            Assert.AreEqual(ShedDimensions.DoorCentreX, leafCentreX, 0.0001f,
+            Assert.AreEqual(ShedDimensions.DoorCentreX, hingeX + leafLocalX, 0.0001f,
                 "the leaf no longer lands in the middle of its opening");
 
-            // And the hinge has to be inside the rough opening, not out in the wall.
+            // The hinge must be at the leaf's edge. Off its centre the door sweeps
+            // through its own frame, and half of it swings back into the room.
+            Assert.AreEqual(ShedDimensions.DoorLeafWidth * 0.5f, leafLocalX, 0.0001f,
+                $"the leaf is offset {leafLocalX:0.000} m from the hinge, so the hinge " +
+                "is not on its edge");
+
             float openingMinX = ShedDimensions.DoorCentreX - (ShedDimensions.DoorRoughWidth * 0.5f);
             Assert.GreaterOrEqual(hingeX, openingMinX - 0.001f,
                 "the hinge line sits outside the door's rough opening");
@@ -127,12 +132,14 @@ namespace Freedome.Tests.EditMode
         [Test]
         public void ServicePanelHingeSitsOnItsFarEdge()
         {
-            float halfPanel = ShedDimensions.ServicePanelLength * 0.5f;
-            float hingeZ = ShedDimensions.ServicePanelCentreZ - halfPanel;
-            float panelCentreZ = hingeZ + halfPanel;
+            float hingeZ = ShellBuilder.ServicePanelHingeZ;
+            float localZ = ShellBuilder.ServicePanelLocalZ;
 
-            Assert.AreEqual(ShedDimensions.ServicePanelCentreZ, panelCentreZ, 0.0001f,
+            Assert.AreEqual(ShedDimensions.ServicePanelCentreZ, hingeZ + localZ, 0.0001f,
                 "the panel no longer lands back in its own hole");
+
+            Assert.AreEqual(ShedDimensions.ServicePanelLength * 0.5f, localZ, 0.0001f,
+                "the panel is hinged through its middle rather than along an edge");
         }
 
         [Test]
