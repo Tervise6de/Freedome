@@ -28,6 +28,29 @@ That is still the most valuable half. Nothing in this repository has ever been
 compiled, so "does the C# actually build against HDRP 17" is the question most
 worth answering, and this answers it.
 
+## What it costs
+
+Nothing, for this repository.
+
+`Tervise6de/Freedome` is **public**, and GitHub Actions gives public
+repositories unlimited free minutes on standard runners, with free artifact
+storage. A private repo would draw on the 2,000 minutes a month the free tier
+allows, and a Unity build would make a dent in that; that does not apply here.
+
+Unity Personal is free under Unity's revenue and funding threshold, which is the
+licence the activation flow issues.
+
+The real cost is time. Expect 30 to 60 minutes for the first run - it pulls a
+12 GB editor image and resolves HDRP from scratch. Later runs reuse the cached
+`Library`. Leave the bake off until you know the project compiles.
+
+One thing that has to be true for any of this to work: the workflow files must
+exist on the repository's **default branch**, or GitHub will not show the *Run
+workflow* button at all. This repository's default branch is
+`claude/shed-environment-demo-9obg2y`, which is where they are, so the buttons
+appear. If the default branch is ever changed, move or merge the workflows with
+it.
+
 ## Steps
 
 All of these work in a mobile browser.
