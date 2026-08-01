@@ -11,6 +11,14 @@ Regenerate with:
 python3 Tools/preview_render.py --width 1280 --height 720 --exposure 0.46
 ```
 
+There is also an interactive version. `Tools/export_web_walkthrough.py` bakes
+the same shading into vertex colours and writes a self-contained WebGL page you
+can walk around, including on a phone:
+
+```bash
+python3 Tools/export_web_walkthrough.py --tessellate 1.2   # -> docs/walkthrough.html
+```
+
 ## What it does
 
 Reads `Assets/Game/Scripts/Environment/ShedDimensions.cs` - the same table the
@@ -18,6 +26,9 @@ scene generator reads - reconstructs the shed in Python, and rasterises it with
 a z-buffer. Shading is flat per-triangle (which is what the generated meshes
 actually have), with:
 
+- geometry tessellated to ~300 mm before shading, so light varies **across** a
+  surface rather than per face. Without this a six-metre floorboard is one flat
+  tone and the sun pool from the window cannot appear at all
 - one directional sun at the same angle and rough intensity as `LightingBuilder`
 - a shadow test that only lets sunlight in where a ray from the surface leaves
   through the window or the vent, so the sun pool on the bench is real

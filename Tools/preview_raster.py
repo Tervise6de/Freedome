@@ -192,8 +192,63 @@ def _clip_near(poly_view, poly_shade, near):
     return out_v, out_s
 
 
-def render(mesh: Mesh, camera: Camera, shade_fn, background_fn, near=0.04):
-    """Rasterise the mesh. shade_fn(centroids, normals) -> (T,3) linear colour."""
+def tessellate(a, b, c, colors, max_edge, limit_fn=None):
+    """Split triangles until no edge is longer than max_edge.
+
+    Lighting is evaluated per vertex, so a six-metre floorboard drawn as one
+    quad can only ever have one brightness across its whole length: the sun
+    pool from the window, and the falloff of the lamp, simply cannot appear.
+    Subdividing first is what lets them.
+    """
+    while True:
+        e0 = np.linalg.norm(b - a, axis=1)
+        e1 = np.linalg.norm(c - b, axis=1)
+        e2 = np.linalg.norm(a - c, axis=1)
+        longest = np.maximum(np.maximum(e0, e1), e2)
+        # The limit varies with position: the 60 m ground plane and the hedge do
+        # not need a 300 mm mesh, and subdividing them costs three quarters of a
+        # million triangles for scenery seen through one small window.
+        limit = max_edge if limit_fn is None else limit_fn((a + b + c) / 3.0)
+        # Area guard. Without it, the 19 mm edge of a six-metre floorboard gets
+        # subdivided fifteen times along its length for no visible benefit, and
+        # slivers like that dominate the triangle budget.
+        area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+        split = (longest > limit) & (area > 0.012)
+        if not split.any():
+            return a, b, c, colors
+
+        keep = ~split
+        ka, kb, kc, kcol = a[keep], b[keep], c[keep], colors[keep]
+
+        sa, sb, sc, scol = a[split], b[split], c[split], colors[split]
+        se0, se1, se2 = e0[split], e1[split], e2[split]
+
+        # Split the longest edge of each triangle at its midpoint.
+        pick0 = (se0 >= se1) & (se0 >= se2)
+        pick1 = (se1 > se0) & (se1 >= se2)
+        pick2 = ~(pick0 | pick1)
+
+        out_a, out_b, out_c, out_col = [ka], [kb], [kc], [kcol]
+        for mask, (p, q, r) in ((pick0, (0, 1, 2)), (pick1, (1, 2, 0)), (pick2, (2, 0, 1))):
+            if not mask.any():
+                continue
+            tri = np.stack([sa[mask], sb[mask], sc[mask]], axis=1)
+            v0, v1, v2 = tri[:, p], tri[:, q], tri[:, r]
+            mid = (v0 + v1) * 0.5
+            col = scol[mask]
+            out_a.extend([v0, mid])
+            out_b.extend([mid, v1])
+            out_c.extend([v2, v2])
+            out_col.extend([col, col])
+
+        a = np.concatenate(out_a)
+        b = np.concatenate(out_b)
+        c = np.concatenate(out_c)
+        colors = np.concatenate(out_col)
+
+
+def prepare(mesh: Mesh, camera_eye, shade_fn, max_edge=0.35, limit_fn=None):
+    """Tessellate, then shade every vertex. Returns (a, b, c, ca, cb, cc)."""
     verts, tris, colors = mesh.arrays()
 
     a = verts[tris[:, 0]]
@@ -204,15 +259,35 @@ def render(mesh: Mesh, camera: Camera, shade_fn, background_fn, near=0.04):
     lengths = np.linalg.norm(normals, axis=1)
     keep = lengths > 1e-12
     a, b, c, colors = a[keep], b[keep], c[keep], colors[keep]
-    normals = normals[keep] / lengths[keep, None]
-    centroids = (a + b + c) / 3.0
 
-    # Two-sided shading: flip any normal that faces away from the camera.
-    to_cam = camera.eye - centroids
+    if max_edge > 0:
+        a, b, c, colors = tessellate(a, b, c, colors, max_edge, limit_fn)
+
+    normals = np.cross(b - a, c - a)
+    lengths = np.linalg.norm(normals, axis=1)
+    keep = lengths > 1e-12
+    a, b, c, colors = a[keep], b[keep], c[keep], colors[keep]
+    normals = normals[keep] / lengths[keep, None]
+
+    centroids = (a + b + c) / 3.0
+    to_cam = np.asarray(camera_eye) - centroids
     flip = np.einsum('ij,ij->i', normals, to_cam) < 0
     normals[flip] *= -1.0
 
-    shaded = shade_fn(centroids, normals, colors)
+    # Flat normals, but lighting sampled at each corner, so gradients are smooth
+    # across a face while the facet edges stay crisp.
+    ca = shade_fn(a, normals, colors)
+    cb = shade_fn(b, normals, colors)
+    cc = shade_fn(c, normals, colors)
+    return a, b, c, ca, cb, cc
+
+
+def render(mesh: Mesh, camera: Camera, shade_fn, background_fn, near=0.04, max_edge=0.35,
+           prepared=None):
+    """Rasterise the mesh with per-vertex interpolated lighting."""
+    if prepared is None:
+        prepared = prepare(mesh, camera.eye, shade_fn, max_edge)
+    a, b, c, ca, cb, cc = prepared
 
     va = camera.to_view(a)
     vb = camera.to_view(b)
@@ -238,12 +313,13 @@ def render(mesh: Mesh, camera: Camera, shade_fn, background_fn, near=0.04):
 
     for t in order:
         poly_v = [va[t], vb[t], vc[t]]
-        poly_s = [shaded[t], shaded[t], shaded[t]]
+        poly_s = [ca[t], cb[t], cc[t]]
         pv, ps = _clip_near(poly_v, poly_s, near)
         if len(pv) < 3:
             continue
 
         pv = np.array(pv)
+        ps = np.array(ps)
         z = pv[:, 2]
         sx = (pv[:, 0] * f / aspect / z * 0.5 + 0.5) * W
         sy = (0.5 - pv[:, 1] * f / z * 0.5) * H
@@ -287,7 +363,9 @@ def render(mesh: Mesh, camera: Camera, shade_fn, background_fn, near=0.04):
                 continue
 
             sub[nearer] = pixel_w[nearer]
-            frame[y0:y1, x0:x1][nearer] = shaded[t]
+            col = (w0[..., None] * ps[0] + w1[..., None] * ps[k]
+                   + w2[..., None] * ps[k + 1])
+            frame[y0:y1, x0:x1][nearer] = col[nearer]
 
     return frame
 

@@ -33,7 +33,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from generate_diagrams import parse_dimensions            # noqa: E402
-from preview_raster import (Camera, Mesh, render, rot_euler,  # noqa: E402
+from preview_raster import (Camera, Mesh, prepare, render, rot_euler,  # noqa: E402
                             rot_from_to, tonemap)
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "docs/previews"
@@ -1108,6 +1108,23 @@ def shade(centroids, normals, albedo):
     return out
 
 
+def tessellation_limit(centroids: np.ndarray) -> np.ndarray:
+    """Graded subdivision: fine where the light gradient is, coarse elsewhere.
+
+    The floor gets the finest mesh because that is where the sun pool from the
+    window lands and where a coarse mesh is most obvious. Exterior scenery gets
+    almost none - it is 60 m of ground seen through one small window.
+    """
+    near = ((np.abs(centroids[:, 0]) < HW + 0.8) & (np.abs(centroids[:, 2]) < HL + 0.8)
+            & (centroids[:, 1] > -0.6) & (centroids[:, 1] < RIDGE_Y + 0.6))
+    floor = near & (np.abs(centroids[:, 1]) < 0.05)
+    limit = np.where(near, TESSELLATION[0], TESSELLATION[1])
+    return np.where(floor, min(TESSELLATION[0], TESSELLATION[2]), limit)
+
+
+TESSELLATION = [0.30, 8.0, 0.40]
+
+
 def background(camera: Camera) -> np.ndarray:
     H, W = camera.height, camera.width
     ys = np.linspace(0.0, 1.0, H)[:, None]
@@ -1141,6 +1158,8 @@ def main():
     ap.add_argument("--height", type=int, default=720)
     ap.add_argument("--exposure", type=float, default=0.62)
     ap.add_argument("--only", type=int, default=0, help="render only view N (1-8)")
+    ap.add_argument("--tessellate", type=float, default=0.30,
+                    help="max triangle edge in metres before subdivision (0 disables)")
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -1151,10 +1170,16 @@ def main():
 
     views = VIEWS if args.only == 0 else [VIEWS[args.only - 1]]
 
+    print(f"tessellating to {args.tessellate} m and shading ...", flush=True)
+    TESSELLATION[0] = args.tessellate
+    prepared = prepare(mesh, np.array([0.0, 1.6, 0.0]), shade, args.tessellate,
+                       tessellation_limit)
+    print(f"  {len(prepared[0]):,} triangles after subdivision")
+
     for name, eye, target, fov in views:
         cam = Camera(eye, target, fov, args.width, args.height)
         print(f"rendering {name} ...", flush=True)
-        frame = render(mesh, cam, shade, background)
+        frame = render(mesh, cam, shade, background, prepared=prepared)
         img = (tonemap(frame, args.exposure) * 255).astype(np.uint8)
         path = OUT_DIR / f"{name}.png"
         Image.fromarray(img).save(path)

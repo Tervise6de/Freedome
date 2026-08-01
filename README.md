@@ -55,6 +55,7 @@ to sign into.
 #    any dimension:
 python3 Tools/generate_diagrams.py
 python3 Tools/preview_render.py
+python3 Tools/export_web_walkthrough.py   # interactive WebGL page
 ```
 
 The build lands in `Builds/Windows/ShedRoomDemo/ShedRoomDemo.exe`.
