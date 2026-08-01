@@ -35,7 +35,7 @@ Consequently:
   intent, not a measurement.
 - **No Windows build has been produced.** `Builds/Windows/ShedRoomDemo/` is
   empty.
-- **No test has run in Unity.** 41 of them run outside it; see the compile check
+- **No test has run in Unity.** 44 of them run outside it; see the compile check
   below.
 - **Nothing has been interacted with.** No door has opened, no object has been
   picked up, and no dropped rigidbody has landed on anything.
@@ -50,7 +50,7 @@ What *was* verified, by four independent passes:
   viewpoints. Confirmed that the framing, roof structure, openings and prop
   placement read correctly, and caught three more real defects in the C#.
 - **Compile check** (`./Tools/compile_check.sh`) - all 9,000 lines type-checked
-  with Roslyn against hand-written Unity stand-ins, plus 41 of the 45 EditMode
+  with Roslyn against hand-written Unity stand-ins, plus 44 of the 48 EditMode
   tests actually executed. Caught five defects, two of them hard compile
   failures. See [Tools/CompileCheck/README.md](../Tools/CompileCheck/README.md).
 - **HDRP API check** (`./Tools/verify_hdrp_api.sh`) - every HDRP symbol the
@@ -153,10 +153,15 @@ design assumes once HDRP actually executes them.
 code in the project and the least verifiable without a running game. Specific
 things to look at first, in order:
 
-- **Does the door clear what is around it?** It swings outward 92 degrees on the
-  hinge at `DoorCentreX - DoorLeafWidth/2`. Outward means into the exterior
-  ground plane, which exists, but nothing has checked the swept arc against the
-  cladding, the tee hinges or the boot tray.
+- ~~**Does the door clear what is around it?**~~ **Checked.** The swept arc is
+  sampled at 24 angles by 9 points along the leaf, and every sample must stay
+  outside the interior wall face. This found the door opening the *wrong way*:
+  the angle was -92, which under Unity's left-handed rotation swings an 820 mm
+  leaf into a 4 m room, while the comment beside it said outward. Now +92, with
+  `DoorSwingsOutwardThroughItsWholeArc` holding the sign.
+  Still unchecked by anything but arithmetic: whether the leaf fouls the tee
+  hinges or the weatherboard as it passes, which needs geometry the test does
+  not model.
 - **Does the blocker switch off in time?** `HingedPart` disables the door's
   blocker as soon as the leaf moves past 1 degree. If that reads as the player
   being able to walk through a nearly-shut door, raise the threshold.
@@ -298,6 +303,7 @@ Recorded because the method that caught them is worth repeating.
 | Gable sheathing stopped at the rafter underside, leaving an open slot the full length of both gable rakes | Preview render 03 - sky visible through the roof junction | Taken up to `RoofBuilder.TroughY` instead, matching the eaves blocking |
 | Window sill board's top face was coplanar with the framing sill trimmer | Preview render 08 - z-fighting speckle right where the player leans in | Sill board now sits on the trimmer rather than flush with it |
 | The ridge cap wings stopped 3.2 mm short of the centreline each, leaving a 6.5 mm slot straight through the apex for the full 6.9 m of the ridge - daylight down the middle of the ceiling, and rain into the room | Reading `RoofBuilder.BuildCovering` | Wings moved 10 mm up the slope so they lap 12 mm across the apex. `RidgeCapClosesTheApex` and `RidgeCapStillCoversTheSheetEdge` pin it |
+| The door opened inward. `HingedPart` was configured with -92 degrees, and Unity rotates left-handed, so a leaf at +X swings toward +Z - into a 4 m room - while the comment beside the call said "swings outward, away from the room" | Working out the swept arc for the arc-clearance test | Changed to +92 and exposed as `OpeningsBuilder.DoorOpenAngleDegrees`, with a test that samples the whole arc against the interior wall face |
 | Top-shelf sack used the tarpaulin material, so a bag of feed read as a folded blue groundsheet | Preview render 02 | Switched to the card material - a paper sack |
 | Wood grain ran across every horizontal member instead of along it. UVs projected against each face's dominant world axis, and the side of a top plate faces sideways whichever way the plate runs, so V ended up vertical on plates, rafters, purlins, collar ties, noggins and bench rails | Reading `MeshBuilder.PlanarUv` against what `SamplePine` actually generates | `MeshBuilder` now derives the UV frame from a grain direction: V follows the piece's own longest axis, carried through its rotation, with `GrainOverride` for materials that have a direction the geometry does not imply |
 | `[MenuItem("...", priority = N)]` on all eight menu entries. Unity's `priority` is an internal field, so a named attribute argument cannot bind to it - this is a hard compile error, and it took out every entry point to the project's tooling | Compile check | Changed to the positional form, `[MenuItem("...", false, N)]` |

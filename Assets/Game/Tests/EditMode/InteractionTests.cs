@@ -130,6 +130,63 @@ namespace Freedome.Tests.EditMode
         }
 
         [Test]
+        public void DoorSwingsOutwardThroughItsWholeArc()
+        {
+            // Unity rotates left-handed, so a point at +X moves toward -Z under a
+            // positive angle about +Y. The door sits in the -Z wall, which makes -Z
+            // away from the room. Getting that sign wrong swings an 820 mm leaf into
+            // a 4 m room, and the comment beside the code claimed outward while the
+            // code did the opposite for one commit.
+            float hingeX = OpeningsBuilder.DoorHingeX;
+            float hingeZ = -ShedDimensions.HalfLength + OpeningsBuilder.DoorLeafClosedZ;
+            float interiorFaceZ = -ShedDimensions.HalfLength;
+
+            for (int step = 0; step <= 24; step++)
+            {
+                float angle = OpeningsBuilder.DoorOpenAngleDegrees * (step / 24f);
+
+                // Sample along the leaf, hinge to latch edge.
+                for (int i = 0; i <= 8; i++)
+                {
+                    float r = ShedDimensions.DoorLeafWidth * (i / 8f);
+                    Vector3 point = new Vector3(hingeX, 0f, hingeZ) +
+                                    (Quaternion.AngleAxis(angle, Vector3.up) * new Vector3(r, 0f, 0f));
+
+                    Assert.LessOrEqual(point.z, interiorFaceZ + 0.001f,
+                        $"at {angle:0} deg the leaf reaches z={point.z:0.000}, which is " +
+                        $"{(point.z - interiorFaceZ) * 1000f:0} mm inside the room");
+                }
+            }
+        }
+
+        [Test]
+        public void ClosedDoorLeafFitsItsRoughOpening()
+        {
+            float hingeX = OpeningsBuilder.DoorHingeX;
+            float latchX = hingeX + ShedDimensions.DoorLeafWidth;
+
+            float openingMinX = ShedDimensions.DoorCentreX - (ShedDimensions.DoorRoughWidth * 0.5f);
+            float openingMaxX = ShedDimensions.DoorCentreX + (ShedDimensions.DoorRoughWidth * 0.5f);
+
+            Assert.GreaterOrEqual(hingeX, openingMinX - 0.001f,
+                "the hinge stile is buried in the wall beside the opening");
+            Assert.LessOrEqual(latchX, openingMaxX + 0.001f,
+                "the latch stile is buried in the wall beside the opening");
+        }
+
+        [Test]
+        public void OpenDoorLeavesTheDoorwayWalkable()
+        {
+            // At full open the leaf must be close enough to perpendicular that it is
+            // not still standing across its own opening.
+            float across = Mathf.Abs(Mathf.Cos(OpeningsBuilder.DoorOpenAngleDegrees * Mathf.Deg2Rad)) *
+                           ShedDimensions.DoorLeafWidth;
+
+            Assert.Less(across, 0.12f,
+                $"the open leaf still spans {across:0.00} m of its own doorway");
+        }
+
+        [Test]
         public void ServicePanelHingeSitsOnItsFarEdge()
         {
             float hingeZ = ShellBuilder.ServicePanelHingeZ;

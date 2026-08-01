@@ -99,6 +99,20 @@ namespace Freedome.EditorTools.Generation
         /// <summary>The leaf's own offset from that hinge line.</summary>
         public static float DoorLeafLocalX => Dim.DoorLeafWidth * 0.5f;
 
+        /// <summary>
+        /// How far the leaf swings, in the sign HingedPart applies about +Y.
+        ///
+        /// Positive is outward here, and the sign is not obvious: Unity rotates
+        /// left-handed, so a point at +X moves to -Z under a positive angle. The
+        /// door sits in the -Z wall, which makes -Z away from the room. This was
+        /// -92 for one commit, which swung the leaf into the room while the comment
+        /// beside it claimed the opposite.
+        /// </summary>
+        public const float DoorOpenAngleDegrees = 92f;
+
+        /// <summary>Z of the closed leaf, relative to the inner face of the wall.</summary>
+        public static float DoorLeafClosedZ => -Dim.WallThickness + 0.0225f + 0.025f;
+
         private static void BuildDoorLeaf(BuildContext ctx, Transform parent)
         {
             // 0 timber, 1 zinc hardware
@@ -191,9 +205,11 @@ namespace Freedome.EditorTools.Generation
                 BuildContext.MarkMovable(blockerGo);
 
                 // Swings outward, away from the room, which is how a shed door hung on
-                // exterior tee hinges actually opens.
+                // exterior tee hinges actually opens. DoorSwingsOutwardThroughItsWholeArc
+                // is what keeps the sign honest.
                 HingedPart part = hinge.AddComponent<HingedPart>();
-                part.Configure("Open the door", "Close the door", Vector3.up, -92f, 150f,
+                part.Configure("Open the door", "Close the door", Vector3.up,
+                               DoorOpenAngleDegrees, 150f,
                                blockerGo != null ? blockerGo.GetComponent<Collider>() : null);
             }
         }
