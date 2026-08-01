@@ -37,10 +37,10 @@ exterior ground.
 
 | Family | Maps | Resolution | Source |
 | --- | --- | --- | --- |
-| Pine | Albedo, Normal, Mask | 1024 | `ShedTextureGenerator.SamplePine` |
-| PineFloorboard | Albedo, Normal, Mask | 1024 | `SampleFloorboard` |
+| Pine | Albedo, Normal, Mask | 2048 | `ShedTextureGenerator.SamplePine` |
+| PineFloorboard | Albedo, Normal, Mask | 2048 | `SampleFloorboard` |
 | Weatherboard | Albedo, Normal, Mask | 1024 | `SampleWeatherboard` |
-| PlyBench | Albedo, Normal, Mask | 1024 | `SamplePlyBench` |
+| PlyBench | Albedo, Normal, Mask | 2048 | `SamplePlyBench` |
 | Galvanised | Albedo, Normal, Mask | 1024 | `SampleGalvanised` |
 | Pegboard | Albedo, Normal, Mask | 1024 | `SamplePegboard` |
 | Concrete | Albedo, Normal, Mask | 1024 | `SampleConcrete` |
@@ -115,7 +115,7 @@ finished production art.
 
 | Asset | Status | What "finished" would mean |
 | --- | --- | --- |
-| **All 30 generated texture maps** | **Placeholder-quality** | They are procedural approximations of timber, steel and fabric, not scanned or hand-painted material. They give correct roughness behaviour, correct physical scale and plausible variation - enough to judge the room's lighting, composition and scale. A shipping product would replace them with authored or scanned PBR sets |
+| **All 30 generated texture maps** | **Improved, still not final** | The timber now uses a real growth-ring model rather than layered noise, and the metal takes its spangle from crystal boundaries. They are still procedural rather than scanned or hand-painted, and have never been seen on a lit surface in Unity. Swatches in `docs/previews/materials/` |
 | **Audio** | **Absent** | `Assets/Game/Audio/` is empty. There is no ambience, no footsteps, no room tone. Out of scope for this milestone |
 | **Prefabs** | **Absent** | `Assets/Game/Prefabs/` is empty. Reuse is handled by `PropLibrary` methods appending into a shared mesh, which is better for draw calls but means there are no prefab assets to point at. If hand editing becomes the workflow, this should change |
 | **`ProjectVersion.txt` = 6000.0.58f1** | **Unverified** | Written without a Unity install available to confirm the exact patch release. Any Unity 6000.0.x will open the project, with an upgrade prompt if the patch differs |

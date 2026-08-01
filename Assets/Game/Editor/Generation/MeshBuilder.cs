@@ -46,6 +46,16 @@ namespace Freedome.EditorTools.Generation
         /// </summary>
         public Vector3? GrainOverride { get; set; }
 
+        /// <summary>
+        /// Slides the whole map along the surface, in tiles.
+        ///
+        /// The maps tile every metre, so without this every floorboard samples the
+        /// same square of texture and the floor reads as twenty-nine copies of one
+        /// board. Giving each board its own offset costs nothing and is the single
+        /// cheapest way to break that repeat.
+        /// </summary>
+        public Vector2 UvOffset { get; set; }
+
         /// <summary>Resolved grain for the primitive currently being emitted.</summary>
         private Vector3 _grain;
 
@@ -617,7 +627,8 @@ namespace Freedome.EditorTools.Generation
                 {
                     along.Normalize();
                     Vector3 across = Vector3.Cross(n, along);
-                    return new Vector2(Vector3.Dot(p, across), Vector3.Dot(p, along)) * UvScale;
+                    return (new Vector2(Vector3.Dot(p, across), Vector3.Dot(p, along)) * UvScale)
+                           + UvOffset;
                 }
             }
 
@@ -639,7 +650,7 @@ namespace Freedome.EditorTools.Generation
                 uv = new Vector2(p.x, p.y);
             }
 
-            return uv * UvScale;
+            return (uv * UvScale) + UvOffset;
         }
 
         // ------------------------------------------------------------------

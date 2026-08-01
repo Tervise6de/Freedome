@@ -19,6 +19,18 @@ can walk around, including on a phone:
 python3 Tools/export_web_walkthrough.py --tessellate 1.2   # -> docs/walkthrough.html
 ```
 
+## Material swatches
+
+`Tools/preview_textures.py` renders the material set on its own, one square
+metre each, relit so the normal map reads:
+
+```bash
+python3 Tools/preview_textures.py --size 512
+```
+
+Output is `docs/previews/materials/`. It mirrors `ShedTextureGenerator.cs`,
+which is the source of truth; if the two drift, the C# is right.
+
 ## What it does
 
 Reads `Assets/Game/Scripts/Environment/ShedDimensions.cs` - the same table the

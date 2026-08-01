@@ -64,6 +64,49 @@ Every map is generated procedurally by `ShedTextureGenerator` into
 - `_Normal` derived from the recipe's height field
 - `_Mask` R metallic, G ambient occlusion, B detail, A smoothness
 
+### The wood model
+
+Timber is most of what the player looks at, so it gets a real model rather than
+layered noise.
+
+A tiling map has to be exactly periodic, and the figure a plainsawn board shows
+comes from growth rings concentric about a pith outside the board. Concentric
+circles are not periodic, so they cannot be used. Instead a periodic stripe
+pattern is warped by periodic noise: the stripes wander into arches and flames
+locally while the map still repeats exactly.
+
+Three things make the difference between grain and noise:
+
+- **Both warps stay well under one ring of displacement.** Push them past that
+  and the rings stop being continuous lines and break into dashes.
+- **Ring spacing varies slowly**, so bands of tight rings sit next to bands of
+  wide ones. Evenly spaced rings read as a comb, not as timber.
+- **The fibre is stretched about sixty to one.** The aspect ratio is what makes
+  it read as fibre at all.
+
+A sharpness control blends between the hard latewood band of sawn softwood and
+the broad soft banding of rotary-cut veneer. Plywood needs the soft end: warping
+the hard band closes it into a crazed network of loops.
+
+Knots are sparse - two per square metre is generous for clean stock - and dark
+with a slightly redder core.
+
+Galvanised steel takes its spangle from cell *boundaries* (Worley F2 - F1)
+rather than cell centres. Zinc crystallises into flat angular facets; the
+nearest-point distance only ever gives round blobs, which read as dents.
+
+### Breaking the repeat
+
+Two mechanisms, because a one-metre tile on a six-metre floor is otherwise
+obvious:
+
+- **Per-piece UV offset.** Every floorboard samples a different square of the
+  map, derived from its index so it stays reproducible. Costs nothing and turns
+  twenty-nine copies of one board into twenty-nine boards.
+- **Resolution where it counts.** Pine, floorboards and the bench ply generate
+  at 2048 across one metre - half a millimetre per texel - because the player
+  stands over them. The ground outside the window stays at 1024.
+
 Two constraints shape all of them:
 
 1. **Each map covers exactly one square metre.** Paired with UVs measured in

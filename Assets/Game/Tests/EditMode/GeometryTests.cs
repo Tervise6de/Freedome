@@ -175,6 +175,26 @@ namespace Freedome.Tests.EditMode
         }
 
         [Test]
+        public void UvOffsetSlidesTheMapWithoutChangingItsScale()
+        {
+            // Each floorboard gets its own offset so the floor does not read as one
+            // board repeated. It must move the map, not stretch it.
+            MeshBuilder plain = new MeshBuilder("plain");
+            plain.AddBox(Vector3.zero, new Vector3(1f, 1f, 1f), 0);
+
+            MeshBuilder shifted = new MeshBuilder("shifted") { UvOffset = new Vector2(0.37f, 0.61f) };
+            shifted.AddBox(Vector3.zero, new Vector3(1f, 1f, 1f), 0);
+
+            Bounds a = UvBounds(plain.ToMesh());
+            Bounds b = UvBounds(shifted.ToMesh());
+
+            Assert.AreEqual(a.size.x, b.size.x, 0.0005f, "the offset changed the U scale");
+            Assert.AreEqual(a.size.y, b.size.y, 0.0005f, "the offset changed the V scale");
+            Assert.AreEqual(0.37f, b.center.x - a.center.x, 0.0005f);
+            Assert.AreEqual(0.61f, b.center.y - a.center.y, 0.0005f);
+        }
+
+        [Test]
         public void SubmeshesAreKeptSeparate()
         {
             MeshBuilder mb = new MeshBuilder("test", 3);

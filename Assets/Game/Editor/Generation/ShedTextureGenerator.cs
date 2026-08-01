@@ -25,7 +25,16 @@ namespace Freedome.EditorTools.Generation
     public static class ShedTextureGenerator
     {
         public const string OutputFolder = "Assets/Game/Art/Textures/Generated";
+
+        /// <summary>Default map size. One metre across, so this is texels per metre.</summary>
         private const int Resolution = 1024;
+
+        /// <summary>
+        /// Size for surfaces the player gets close to. Half a millimetre per texel
+        /// on the bench top and the floor is worth the generation time; the ground
+        /// outside the window is not.
+        /// </summary>
+        private const int HeroResolution = 2048;
 
         /// <summary>One sample of a surface at a point, in linear terms.</summary>
         public struct SurfaceSample
@@ -44,6 +53,7 @@ namespace Freedome.EditorTools.Generation
             public string Name;
             public Sampler Sample;
             public float BumpStrength;
+            public int Resolution = ShedTextureGenerator.Resolution;
         }
 
         [MenuItem("Freedome/Generate/Textures", priority = 10)]
@@ -60,10 +70,10 @@ namespace Freedome.EditorTools.Generation
 
             List<Recipe> recipes = new List<Recipe>
             {
-                new Recipe { Name = "Pine",           Sample = SamplePine,          BumpStrength = 0.010f },
-                new Recipe { Name = "PineFloorboard", Sample = SampleFloorboard,    BumpStrength = 0.012f },
+                new Recipe { Name = "Pine",           Sample = SamplePine,          BumpStrength = 0.010f, Resolution = HeroResolution },
+                new Recipe { Name = "PineFloorboard", Sample = SampleFloorboard,    BumpStrength = 0.012f, Resolution = HeroResolution },
                 new Recipe { Name = "Weatherboard",   Sample = SampleWeatherboard,  BumpStrength = 0.030f },
-                new Recipe { Name = "PlyBench",       Sample = SamplePlyBench,      BumpStrength = 0.008f },
+                new Recipe { Name = "PlyBench",       Sample = SamplePlyBench,      BumpStrength = 0.008f, Resolution = HeroResolution },
                 new Recipe { Name = "Galvanised",     Sample = SampleGalvanised,    BumpStrength = 0.004f },
                 new Recipe { Name = "Pegboard",       Sample = SamplePegboard,      BumpStrength = 0.020f },
                 new Recipe { Name = "Concrete",       Sample = SampleConcrete,      BumpStrength = 0.010f },
@@ -96,7 +106,7 @@ namespace Freedome.EditorTools.Generation
 
         private static void Generate(Recipe recipe)
         {
-            int size = Resolution;
+            int size = recipe.Resolution;
             Color[] albedo = new Color[size * size];
             Color[] mask = new Color[size * size];
             float[] height = new float[size * size];
@@ -178,14 +188,14 @@ namespace Freedome.EditorTools.Generation
         {
             foreach (Recipe r in recipes)
             {
-                SetImporter($"{OutputFolder}/{r.Name}_Albedo.png", TextureImporterType.Default, true);
-                SetImporter($"{OutputFolder}/{r.Name}_Normal.png", TextureImporterType.NormalMap, false);
-                SetImporter($"{OutputFolder}/{r.Name}_Mask.png", TextureImporterType.Default, false);
+                SetImporter($"{OutputFolder}/{r.Name}_Albedo.png", TextureImporterType.Default, true, r.Resolution);
+                SetImporter($"{OutputFolder}/{r.Name}_Normal.png", TextureImporterType.NormalMap, false, r.Resolution);
+                SetImporter($"{OutputFolder}/{r.Name}_Mask.png", TextureImporterType.Default, false, r.Resolution);
             }
             AssetDatabase.Refresh();
         }
 
-        private static void SetImporter(string path, TextureImporterType type, bool srgb)
+        private static void SetImporter(string path, TextureImporterType type, bool srgb, int maxSize = 1024)
         {
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null)
@@ -200,7 +210,7 @@ namespace Freedome.EditorTools.Generation
             importer.anisoLevel = 8;
             importer.mipmapEnabled = true;
             importer.streamingMipmaps = true;
-            importer.maxTextureSize = 1024;
+            importer.maxTextureSize = maxSize;
             importer.textureCompression = TextureImporterCompression.CompressedHQ;
             importer.SaveAndReimport();
         }
@@ -211,155 +221,209 @@ namespace Freedome.EditorTools.Generation
 
         private static Color Lerp3(Color a, Color b, float t) => Color.Lerp(a, b, Mathf.Clamp01(t));
 
-        /// <summary>Sawn structural pine: long fibre grain, occasional knot, mill marks.</summary>
-        private static SurfaceSample SamplePine(float u, float v)
+        // ---------------------------------------------------------------------
+        // The wood model
+        //
+        // A tiling texture has to be exactly periodic, and the figure a plainsawn
+        // board shows comes from growth rings concentric about a pith outside the
+        // board. Concentric circles are not periodic, so they cannot be used.
+        //
+        // Instead a periodic stripe pattern is warped by periodic noise: the
+        // stripes wander into arches and flames locally while the map still
+        // repeats exactly. Both warps have to stay well under one ring of
+        // displacement, or the rings stop being continuous lines and break into
+        // dashes - which is what separates grain from noise.
+        // ---------------------------------------------------------------------
+
+        private const float RingsPerMetre = 60f;    // integer, so the stripes stay periodic
+        private const float LatewoodFraction = 0.30f;
+
+        private struct WoodSample
         {
-            // Grain runs along V. Stretching the noise 20:1 gives fibre, not blobs.
-            float fibre = TilingNoise.Fbm(u * 24f, v * 2f, 24, 11, 4);
-            float band = TilingNoise.Fbm(u * 7f, v * 1f, 7, 23, 3);
-            float grain = Mathf.Pow(Mathf.Abs(Mathf.Sin((band * 9f) + (fibre * 2.2f))), 1.6f);
+            public float Ring;   // 0 in earlywood, 1 in the middle of a latewood band
+            public float Knot;
+            public float Fibre;
+        }
 
-            // Sparse knots.
-            float knotDist = TilingNoise.Cell(u * 3f, v * 2f, 3, 57);
-            float knot = Mathf.Clamp01(1f - (knotDist * 7f));
-            knot *= knot;
+        /// <param name="sharpness">
+        /// 1 gives the hard latewood band of sawn softwood; near 0 gives the broad
+        /// soft banding of rotary-cut veneer. Plywood needs the soft end - the hard
+        /// band closes into a crazed network of loops once it is warped.
+        /// </param>
+        private static WoodSample WoodFigure(float u, float v, int seed, float warp = 1.35f,
+                                             float ringScale = 1f, float sharpness = 1f)
+        {
+            float broad = TilingNoise.Fbm(u * 1.6f, v * 0.5f, 2, seed + 11, 3) - 0.5f;
+            float fine = TilingNoise.Fbm(u * 5.0f, v * 1.1f, 5, seed + 29, 2) - 0.5f;
 
-            Color pale = new Color(0.512f, 0.408f, 0.278f);
-            Color dark = new Color(0.352f, 0.258f, 0.160f);
-            Color c = Lerp3(pale, dark, (grain * 0.55f) + (band * 0.20f));
-            c = Lerp3(c, new Color(0.212f, 0.145f, 0.086f), knot * 0.85f);
+            // Ring spacing varies with how the tree grew: bands of tight rings sit
+            // next to bands of wide ones. Without this the grain is a comb.
+            float density = 0.72f + (0.56f * TilingNoise.Fbm(u * 1.1f, v * 0.35f, 2, seed + 71, 2));
 
-            // Fine saw marks across the grain keep large boards from looking flat.
-            float saw = TilingNoise.Value(u * 3f, v * 160f, 3, 91) * 0.06f;
-            c.r += saw - 0.03f;
-            c.g += saw - 0.03f;
-            c.b += saw - 0.03f;
+            float s = (u * RingsPerMetre * ringScale * density)
+                      + (broad * warp * 5.0f) + (fine * warp * 0.9f);
 
-            float h = 0.5f + ((grain - 0.5f) * 0.6f) - (knot * 0.25f) + (saw * 0.4f);
-            float smooth = Mathf.Lerp(0.24f, 0.12f, grain) - (knot * 0.05f);
+            float phase = s - Mathf.Floor(s);
+            float band = Mathf.Clamp01((phase - (1f - LatewoodFraction)) / LatewoodFraction);
+            band = Mathf.Pow(Mathf.Sin(band * Mathf.PI * 0.5f), 1.4f);
+            float soft = 0.5f - (0.5f * Mathf.Cos(phase * Mathf.PI * 2f));
+
+            return new WoodSample
+            {
+                Ring = (band * sharpness) + (soft * (1f - sharpness)),
+                // Stretched about sixty to one: the aspect ratio is what makes this
+                // read as fibre rather than as noise.
+                Fibre = TilingNoise.Fbm(u * 96f, v * 1.6f, 96, seed + 53, 2),
+                // Sparse. Two knots per square metre is generous for clean stock.
+                Knot = Mathf.Pow(Mathf.Clamp01(1f - (TilingNoise.Cell(u * 1.7f, v * 1.1f, 2, seed + 101) * 7.5f)), 2.4f),
+            };
+        }
+
+        private static SurfaceSample SamplePineTinted(float u, float v, int seed, Color pale, Color dark)
+        {
+            WoodSample w = WoodFigure(u, v, seed);
+
+            float t = Mathf.Clamp01((w.Ring * 0.62f) + ((w.Fibre - 0.5f) * 0.13f) + 0.06f);
+            Color c = Lerp3(pale, dark, t);
+            c = Lerp3(c, new Color(0.180f, 0.116f, 0.068f), w.Knot * 0.88f);
+
+            // Mill marks: the faint regular ripple a saw leaves across the grain.
+            float saw = (Mathf.Sin(v * 190f * Mathf.PI * 2f) * 0.5f) + 0.5f;
+            float tint = 0.972f + (0.028f * saw);
+            c = new Color(c.r * tint, c.g * tint, c.b * tint);
 
             return new SurfaceSample
             {
                 Albedo = c,
-                Height = Mathf.Clamp01(h),
-                Smoothness = Mathf.Clamp01(smooth),
-                Occlusion = Mathf.Clamp01(1f - (grain * 0.14f) - (knot * 0.30f)),
+                Height = Mathf.Clamp01(0.5f + ((w.Ring - 0.5f) * 0.30f) - (w.Knot * 0.22f)
+                                       + ((saw - 0.5f) * 0.04f)),
+                Smoothness = Mathf.Clamp01(0.235f - (w.Ring * 0.070f) - (w.Knot * 0.05f)),
+                Occlusion = Mathf.Clamp01(1f - (w.Ring * 0.11f) - (w.Knot * 0.30f)),
                 Metallic = 0f,
             };
         }
 
-        /// <summary>Floorboards: pine that has been walked on, so slightly polished and dustier.</summary>
+        /// <summary>Sawn structural pine.</summary>
+        private static SurfaceSample SamplePine(float u, float v)
+        {
+            return SamplePineTinted(u, v, 11,
+                new Color(0.512f, 0.408f, 0.278f), new Color(0.335f, 0.243f, 0.150f));
+        }
+
+        /// <summary>Floorboards: pine that has been walked on.</summary>
         private static SurfaceSample SampleFloorboard(float u, float v)
         {
-            SurfaceSample s = SamplePine(u, v);
+            SurfaceSample s = SamplePineTinted(u, v, 131,
+                new Color(0.470f, 0.372f, 0.256f), new Color(0.300f, 0.216f, 0.134f));
 
-            // Traffic polish: broad low-frequency variation in smoothness only.
-            float polish = TilingNoise.Fbm(u * 2.5f, v * 2.5f, 3, 131, 3);
-            s.Smoothness = Mathf.Clamp01(s.Smoothness + (polish * 0.16f));
+            // Traffic polish is broad and shows only in the smoothness.
+            float polish = TilingNoise.Fbm(u * 2.2f, v * 2.2f, 3, 211, 3);
+            s.Smoothness = Mathf.Clamp01(s.Smoothness + (polish * 0.20f));
 
-            // A light, even settling of dust. Kept subtle - this is a used shed,
-            // not a neglected one.
-            float dust = TilingNoise.Fbm(u * 5f, v * 5f, 5, 211, 3);
-            float dustAmount = Mathf.Clamp01((dust - 0.45f) * 1.1f) * 0.16f;
-            s.Albedo = Lerp3(s.Albedo, new Color(0.470f, 0.435f, 0.390f), dustAmount);
-            s.Smoothness = Mathf.Clamp01(s.Smoothness - (dustAmount * 0.5f));
+            // A light, even settling of dust. A used shed, not a neglected one.
+            float dust = TilingNoise.Fbm(u * 5f, v * 5f, 5, 223, 3);
+            float amount = Mathf.Clamp01((dust - 0.46f) * 1.15f) * 0.17f;
+            s.Albedo = Lerp3(s.Albedo, new Color(0.472f, 0.440f, 0.396f), amount);
+            s.Smoothness = Mathf.Clamp01(s.Smoothness - (amount * 0.55f));
 
-            // Scattered scuffs from dragged objects.
-            float scuff = TilingNoise.Ridge(u * 14f, v * 3f, 14, 307, 2);
-            if (scuff > 0.86f)
-            {
-                s.Albedo = Lerp3(s.Albedo, new Color(0.300f, 0.235f, 0.160f), 0.35f);
-                s.Smoothness = Mathf.Clamp01(s.Smoothness - 0.06f);
-            }
+            // Drag scuffs, stretched along the direction things get pulled.
+            float scuff = TilingNoise.Ridge(u * 16f, v * 3f, 16, 307, 2);
+            float mask = Mathf.Clamp01((scuff - 0.87f) * 9f);
+            s.Albedo = Lerp3(s.Albedo, new Color(0.300f, 0.235f, 0.160f), mask * 0.30f);
 
             return s;
         }
 
         /// <summary>
         /// Painted exterior weatherboard. Seven 143 mm boards per metre, so the map
-        /// tiles exactly. Paint is a muted sage that reads as ordinary shed paint.
+        /// tiles exactly. The grain reads through the paint as height far more than
+        /// as colour, which is what separates painted timber from bare timber.
         /// </summary>
         private static SurfaceSample SampleWeatherboard(float u, float v)
         {
             const int BoardsPerMetre = 7;
             float boardV = v * BoardsPerMetre;
-            float withinBoard = boardV - Mathf.Floor(boardV);
+            float within = boardV - Mathf.Floor(boardV);
 
-            // Lap shadow along the bottom edge of each board.
-            float lap = Mathf.Clamp01(1f - (withinBoard / 0.09f));
-            float taper = Mathf.Lerp(0.35f, 1f, withinBoard); // boards are wedge shaped
+            float lap = Mathf.Clamp01(1f - (within / 0.085f));
+            float taper = 0.35f + (0.65f * within);
 
+            WoodSample w = WoodFigure(u, v, 401, 0.55f);
             Color paint = new Color(0.318f, 0.340f, 0.300f);
-            float grain = TilingNoise.Fbm(u * 20f, v * 3f, 20, 401, 3);
-            Color c = Lerp3(paint, paint * 1.18f, grain * 0.5f);
+            float grainTint = 0.975f + (0.05f * w.Fibre);
+            Color c = new Color(paint.r * grainTint, paint.g * grainTint, paint.b * grainTint);
 
-            // Mild chalking and a few worn spots where the paint has thinned.
             float wear = TilingNoise.Fbm(u * 4f, v * 4f, 4, 433, 3);
-            float worn = Mathf.Clamp01((wear - 0.62f) * 3f);
-            c = Lerp3(c, new Color(0.420f, 0.360f, 0.270f), worn * 0.40f);
-
-            float h = (taper * 0.7f) + (grain * 0.10f) - (lap * 0.55f);
-            float smooth = Mathf.Lerp(0.42f, 0.22f, worn) - (lap * 0.10f);
+            float worn = Mathf.Clamp01((wear - 0.60f) * 3.2f);
+            c = Lerp3(c, new Color(0.430f, 0.368f, 0.276f), worn * 0.42f);
 
             return new SurfaceSample
             {
                 Albedo = c,
-                Height = Mathf.Clamp01(h),
-                Smoothness = Mathf.Clamp01(smooth),
+                Height = Mathf.Clamp01((taper * 0.72f) + (w.Ring * 0.10f) - (lap * 0.58f)),
+                Smoothness = Mathf.Clamp01(0.42f - (worn * 0.20f) - (lap * 0.10f)),
                 Occlusion = Mathf.Clamp01(1f - (lap * 0.55f)),
                 Metallic = 0f,
             };
         }
 
-        /// <summary>Worn plywood bench top: veneer figure, edge wear, no gore or grime.</summary>
+        /// <summary>Worn plywood bench top: broad rotary-cut veneer figure, honest use.</summary>
         private static SurfaceSample SamplePlyBench(float u, float v)
         {
-            float figure = TilingNoise.Fbm(u * 10f, v * 3f, 10, 601, 4);
-            float streak = Mathf.Pow(Mathf.Abs(Mathf.Sin((figure * 7f) + (u * 2f))), 1.3f);
+            WoodSample w = WoodFigure(u, v, 601, 0.85f, 0.30f, 0.15f);
 
-            Color light = new Color(0.482f, 0.372f, 0.238f);
-            Color mid = new Color(0.352f, 0.262f, 0.162f);
-            Color c = Lerp3(light, mid, streak * 0.6f);
+            float t = Mathf.Clamp01((w.Ring * 0.42f) + ((w.Fibre - 0.5f) * 0.16f) + 0.10f);
+            Color c = Lerp3(new Color(0.500f, 0.392f, 0.252f), new Color(0.352f, 0.262f, 0.162f), t);
 
-            // Working surfaces pick up ring marks and a general darkening where tools
-            // are set down. Kept to a plausible amount of honest use.
+            // Working surfaces darken where things are repeatedly set down.
             float use = TilingNoise.Fbm(u * 3f, v * 3f, 3, 617, 3);
-            c = Lerp3(c, new Color(0.268f, 0.205f, 0.140f), Mathf.Clamp01((use - 0.5f) * 1.4f) * 0.45f);
+            c = Lerp3(c, new Color(0.268f, 0.205f, 0.140f), Mathf.Clamp01((use - 0.5f) * 1.4f) * 0.42f);
 
-            float scratch = TilingNoise.Ridge(u * 30f, v * 30f, 30, 631, 2);
-            float scratchMask = Mathf.Clamp01((scratch - 0.90f) * 8f);
-            c = Lerp3(c, new Color(0.545f, 0.440f, 0.300f), scratchMask * 0.5f);
+            // Scratches are made by something dragged across, so they are long and
+            // directional. Isotropic noise gives a crazed network instead.
+            float scratch = TilingNoise.Ridge(u * 44f, v * 3.2f, 44, 631, 2);
+            float scratchMask = Mathf.Clamp01((scratch - 0.93f) * 13f);
+            c = Lerp3(c, new Color(0.560f, 0.452f, 0.310f), scratchMask * 0.34f);
 
             return new SurfaceSample
             {
                 Albedo = c,
-                Height = Mathf.Clamp01(0.5f + ((streak - 0.5f) * 0.3f) - (scratchMask * 0.4f)),
-                Smoothness = Mathf.Clamp01(Mathf.Lerp(0.20f, 0.44f, use) - (scratchMask * 0.15f)),
-                Occlusion = Mathf.Clamp01(1f - (scratchMask * 0.2f)),
+                Height = Mathf.Clamp01(0.5f + ((w.Ring - 0.5f) * 0.18f) - (scratchMask * 0.10f)),
+                Smoothness = Mathf.Clamp01(0.20f + (use * 0.26f) - (scratchMask * 0.10f)),
+                Occlusion = Mathf.Clamp01(1f - (scratchMask * 0.20f)),
                 Metallic = 0f,
             };
         }
 
-        /// <summary>Hot-dip galvanised steel: spangle crystals, faint scratches.</summary>
+        /// <summary>
+        /// Hot-dip galvanised steel. The spangle is drawn from cell boundaries, not
+        /// cell centres: zinc crystallises into flat angular facets, and the
+        /// nearest-point distance only ever gives round blobs that read as dents.
+        /// </summary>
         private static SurfaceSample SampleGalvanised(float u, float v)
         {
-            float cell = TilingNoise.Cell(u * 16f, v * 16f, 16, 701);
-            float spangle = Mathf.Clamp01(cell * 2.2f);
+            float edge = TilingNoise.CellEdge(u * 22f, v * 22f, 22, 701);
+            float crystal = Mathf.Clamp01(edge * 2.0f);
 
-            Color baseGrey = new Color(0.560f, 0.575f, 0.585f);
-            Color c = Lerp3(baseGrey * 0.86f, baseGrey * 1.10f, spangle);
+            // Each facet gets its own tone, the way a real spangle catches light.
+            float facet = TilingNoise.Hash01(Mathf.FloorToInt(u * 22f), Mathf.FloorToInt(v * 22f), 22, 705);
+            float spangle = Mathf.Clamp01(crystal * (0.55f + (0.75f * facet)));
+
+            Color baseGrey = new Color(0.470f, 0.486f, 0.500f);
+            float lift = 0.92f + (0.15f * spangle);
+            Color c = new Color(baseGrey.r * lift, baseGrey.g * lift, baseGrey.b * lift);
 
             float dirt = TilingNoise.Fbm(u * 5f, v * 5f, 5, 733, 3);
             c = Lerp3(c, new Color(0.430f, 0.430f, 0.420f), Mathf.Clamp01((dirt - 0.6f) * 1.5f) * 0.30f);
 
-            float scratch = TilingNoise.Ridge(u * 40f, v * 6f, 40, 757, 2);
-            float scratchMask = Mathf.Clamp01((scratch - 0.92f) * 10f);
+            float scratch = TilingNoise.Ridge(u * 44f, v * 7f, 44, 757, 2);
+            float scratchMask = Mathf.Clamp01((scratch - 0.92f) * 11f);
 
             return new SurfaceSample
             {
                 Albedo = c,
-                Height = Mathf.Clamp01(0.5f + ((spangle - 0.5f) * 0.25f)),
-                Smoothness = Mathf.Clamp01(Mathf.Lerp(0.44f, 0.62f, spangle) + (scratchMask * 0.12f) - (dirt * 0.08f)),
+                Height = Mathf.Clamp01(0.5f + ((spangle - 0.5f) * 0.10f)),
+                Smoothness = Mathf.Clamp01(0.44f + (spangle * 0.18f) + (scratchMask * 0.12f) - (dirt * 0.08f)),
                 Occlusion = 1f,
                 Metallic = 1f,
             };

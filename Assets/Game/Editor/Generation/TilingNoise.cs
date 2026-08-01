@@ -13,6 +13,14 @@ namespace Freedome.EditorTools.Generation
     /// </summary>
     public static class TilingNoise
     {
+        /// <summary>Deterministic 0..1 value for a lattice cell. Public so recipes
+        /// can give each cell its own constant, such as the tone of one spangle
+        /// crystal.</summary>
+        public static float Hash01(int x, int y, int period, int seed)
+        {
+            return Hash(Wrap(x, period), Wrap(y, period), seed);
+        }
+
         private static float Hash(int x, int y, int seed)
         {
             unchecked
@@ -82,9 +90,27 @@ namespace Freedome.EditorTools.Generation
         /// </summary>
         public static float Cell(float x, float y, int period, int seed)
         {
+            return CellInternal(x, y, period, seed, false);
+        }
+
+        /// <summary>
+        /// Distance to the cell boundary rather than to its centre, as F2 - F1.
+        ///
+        /// This is what draws the angular crystal edges of galvanised spangle. The
+        /// nearest-point distance alone only ever produces round blobs, which read
+        /// as dents rather than as zinc.
+        /// </summary>
+        public static float CellEdge(float x, float y, int period, int seed)
+        {
+            return CellInternal(x, y, period, seed, true);
+        }
+
+        private static float CellInternal(float x, float y, int period, int seed, bool edge)
+        {
             int xi = Mathf.FloorToInt(x);
             int yi = Mathf.FloorToInt(y);
-            float best = 10f;
+            float f1 = 10f;
+            float f2 = 10f;
 
             for (int dy = -1; dy <= 1; dy++)
             {
@@ -95,14 +121,20 @@ namespace Freedome.EditorTools.Generation
                     float px = cx + Hash(Wrap(cx, period), Wrap(cy, period), seed);
                     float py = cy + Hash(Wrap(cx, period), Wrap(cy, period), seed + 977);
                     float d = ((px - x) * (px - x)) + ((py - y) * (py - y));
-                    if (d < best)
+
+                    if (d < f1)
                     {
-                        best = d;
+                        f2 = f1;
+                        f1 = d;
+                    }
+                    else if (d < f2)
+                    {
+                        f2 = d;
                     }
                 }
             }
 
-            return Mathf.Sqrt(best);
+            return edge ? Mathf.Sqrt(f2) - Mathf.Sqrt(f1) : Mathf.Sqrt(f1);
         }
     }
 }

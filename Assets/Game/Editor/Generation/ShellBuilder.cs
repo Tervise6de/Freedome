@@ -189,12 +189,21 @@ namespace Freedome.EditorTools.Generation
             float pz0 = Dim.ServicePanelCentreZ - (Dim.ServicePanelLength * 0.5f);
             float pz1 = Dim.ServicePanelCentreZ + (Dim.ServicePanelLength * 0.5f);
 
+            int board = 0;
             float x = -deckW;
             while (x < deckW - 0.001f)
             {
                 float w = Mathf.Min(boardW, deckW - x);
                 float cx = x + (w * 0.5f);
                 bool overHatch = cx > px0 && cx < px1;
+
+                // Each board samples a different square of the one-metre map, so
+                // the floor reads as twenty-nine boards rather than as one board
+                // repeated. Derived from the index, so it is reproducible.
+                mb.UvOffset = new Vector2(
+                    ((board * 37) % 100) / 100f,
+                    ((board * 61) % 100) / 100f);
+                board++;
 
                 if (overHatch)
                 {
@@ -212,6 +221,8 @@ namespace Freedome.EditorTools.Generation
 
                 x += w;
             }
+
+            mb.UvOffset = Vector2.zero;
 
             ctx.CreateObject("Shed_Floorboards", mb, new[] { Keys.Floorboard },
                 parent, Vector3.zero, Quaternion.identity, BuildContext.ColliderKind.Mesh);
