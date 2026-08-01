@@ -53,12 +53,18 @@ it.
 
 ## Steps
 
-All of these work in a mobile browser.
+All of these work in a mobile browser. Both workflows are registered and active
+on GitHub, so the *Run workflow* buttons are there now:
+
+- [Unity - request activation file](https://github.com/Tervise6de/Freedome/actions/workflows/unity-activation.yml)
+- [Unity - build and test](https://github.com/Tervise6de/Freedome/actions/workflows/unity-build.yml)
 
 ### 1. Get a Unity licence
 
-1. On GitHub, open **Actions -> Unity - request activation file -> Run
-   workflow**. Leave the version as `6000.0.58f1` unless you want another.
+1. Open [Unity - request activation
+   file](https://github.com/Tervise6de/Freedome/actions/workflows/unity-activation.yml)
+   and tap **Run workflow**. Leave the version as `6000.0.58f1` unless you want
+   another.
 2. When it finishes, download the **unity-activation-file** artifact. It is a
    zip containing a `.alf`.
 3. Unzip it. On iOS, tap the zip in Files and it expands in place; on Android,
@@ -75,7 +81,9 @@ taps.
 
 ### 2. Build
 
-**Actions -> Unity - build and test -> Run workflow.**
+Open [Unity - build and
+test](https://github.com/Tervise6de/Freedome/actions/workflows/unity-build.yml)
+and tap **Run workflow**.
 
 Leave *Run the EditMode tests* on. Leave *Bake lighting* off for the first run:
 you want to find out whether it compiles before spending an hour on a bake.
