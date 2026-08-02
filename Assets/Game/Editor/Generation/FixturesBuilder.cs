@@ -179,6 +179,28 @@ namespace Freedome.EditorTools.Generation
             SlidingPart slide = drawer.AddComponent<SlidingPart>();
             slide.Configure("Open the drawer", "Close the drawer", Vector3.left, 0.30f, 0.55f);
 
+            if (index == 0)
+            {
+                // The top drawer has swollen shut. A damp shed does this, and it is
+                // why the offcut is worth picking up before the screwdriver is.
+                slide.RequireForcing("Swollen shut - it will not pull");
+
+                GameObject edge = new GameObject("Drawer_Edge");
+                edge.transform.SetParent(drawer.transform, false);
+                edge.transform.localPosition = new Vector3(-0.030f, 0f, 0f);
+                BuildContext.MarkMovable(edge);
+
+                BoxCollider reach = edge.AddComponent<BoxCollider>();
+                reach.size = new Vector3(0.05f, frontHeight, bankWidth - 0.012f);
+
+                ToolGatedFixture fixture = edge.AddComponent<ToolGatedFixture>();
+                fixture.Configure("offcut",
+                                  "Swollen shut - it will not pull",
+                                  "Lever the drawer open",
+                                  "It moves freely now",
+                                  ToolGatedFixture.Effect.ForceDrawer);
+            }
+
             BuildDrawerContents(ctx, drawer.transform, index, mid, boxHeight);
         }
 

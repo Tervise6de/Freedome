@@ -225,9 +225,9 @@ namespace Freedome.EditorTools.Generation
                 // exterior tee hinges actually opens. DoorSwingsOutwardThroughItsWholeArc
                 // is what keeps the sign honest.
                 HingedPart part = hinge.AddComponent<HingedPart>();
-                // Locked, and it stays locked. It is the first thing anybody tries
-                // and the reason they start looking at the rest of the building.
+                // Held by the rim lock until its case comes off the inside face.
                 part.Gate(true, false, "The rim lock is fast - no key");
+                BuildRimLockFixture(leaf.transform);
                 part.Configure("Open the door", "Close the door", Vector3.up,
                                DoorOpenAngleDegrees, 150f,
                                blockerGo != null ? blockerGo.GetComponent<Collider>() : null);
@@ -239,6 +239,34 @@ namespace Freedome.EditorTools.Generation
         /// the mechanical locking area the design notes reserve for a future escape
         /// route; nothing here is interactive and nothing is highlighted.
         /// </summary>
+        /// <summary>
+        /// The rim lock case, as something you can take off.
+        ///
+        /// A rim lock is screwed to the *inside* face of the door - that is what
+        /// makes it a rim lock rather than a mortice - so the fixing screws are on
+        /// the player's side of a locked door. Nothing was moved or exposed to make
+        /// this true; it is where BuildDoorHardware has drawn the case since the
+        /// environment milestone.
+        /// </summary>
+        private static void BuildRimLockFixture(Transform leaf)
+        {
+            GameObject go = new GameObject("Door_RimLockCase");
+            go.transform.SetParent(leaf, false);
+            go.transform.localPosition = new Vector3(
+                (Dim.DoorLeafWidth * 0.5f) - 0.075f, 1.020f, 0.030f);
+            BuildContext.MarkMovable(go);
+
+            BoxCollider reach = go.AddComponent<BoxCollider>();
+            reach.size = new Vector3(0.16f, 0.20f, 0.07f);
+
+            ToolGatedFixture fixture = go.AddComponent<ToolGatedFixture>();
+            fixture.Configure("screwdriver",
+                              "The lock case is screwed to the door",
+                              "Take the lock case off",
+                              "The lock case is off",
+                              ToolGatedFixture.Effect.RemoveLock);
+        }
+
         private static void BuildDoorHardware(MeshBuilder mb, float halfW, float bottomGap,
                                               float boardThickness, float ledgeThickness)
         {

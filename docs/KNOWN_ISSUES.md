@@ -205,17 +205,21 @@ to look under the floor never finds the way out, and there is deliberately no
 hint system to rescue them. Specific worries:
 
 - **Is the panel readable as screwed down?** Its four countersunk screws are
-  3 mm cylinders. They have never been rendered at any size.
+  3 mm cylinders. They have never been rendered at any size. The panel is a dead
+  end now, so this matters less, but a dead end that is invisible is just a
+  floor.
 - **Does anyone open the drawer?** The screwdriver is in it. Nothing says so.
-- **Is the skirt board visible from inside the crawl space?** The player is
-  prone in a 230 mm void looking at a board 1.6 m away, lit by whatever comes
-  through an open hatch. That may be too dark to see, and probe coverage down
-  there has not been checked.
-- **Can a character controller physically get down the hatch?** The capsule is
-  360 mm across; the panel opening is 700 x 900 mm. The arithmetic works. Unity
-  crouching through a floor hole is another matter.
-
-The last one is the most likely to simply not work.
+- ~~**Can a character controller physically get down the hatch?**~~ **No, and
+  the route changed because of it.** The underfloor void is 230 mm of clear
+  space; a person needs 350 to 400 mm to crawl. That route was impossible in the
+  world, not merely in Unity. The way out is now the door's rim lock - see
+  DECISIONS.md. `NothingInTheRouteRequiresCrawlingUnderTheFloor` holds the line.
+- **Is the rim lock case readable as something screwed on?** It is a 130 x 38 mm
+  case with a lever and an escutcheon, at 1.020 m on the latch stile. It has
+  never been rendered.
+- **Does the drawer read as stuck rather than as broken?** The prompt says
+  "Swollen shut - it will not pull". If a player reads that as "this drawer is
+  scenery" they never come back to it with the offcut.
 
 ### 4. Assembly definition references
 

@@ -25,7 +25,7 @@ namespace Freedome.Interaction
         /// player looking elsewhere - and the floor panel will not lift until its
         /// four screws are out.
         /// </summary>
-        [SerializeField] private bool lockedForever;
+        [SerializeField] private bool needsLockRemoved;
         [SerializeField] private bool needsPanelUnscrewed;
         [SerializeField] private string lockedPrompt = "It is locked";
 
@@ -55,7 +55,7 @@ namespace Freedome.Interaction
         {
             get
             {
-                if (lockedForever)
+                if (needsLockRemoved && (_escape == null || !_escape.LockRemoved))
                 {
                     return true;
                 }
@@ -118,10 +118,10 @@ namespace Freedome.Interaction
             }
         }
 
-        /// <summary>Locks it shut for good, or until the panel screws are out.</summary>
-        public void Gate(bool locked, bool untilPanelUnscrewed, string prompt)
+        /// <summary>Holds it shut until the rim lock is off, or the panel screws are out.</summary>
+        public void Gate(bool untilLockRemoved, bool untilPanelUnscrewed, string prompt)
         {
-            lockedForever = locked;
+            needsLockRemoved = untilLockRemoved;
             needsPanelUnscrewed = untilPanelUnscrewed;
             lockedPrompt = prompt;
         }

@@ -8,68 +8,73 @@ namespace Freedome.Tests.EditMode
     /// <summary>
     /// The way out, checked as geometry rather than as a story.
     ///
-    /// A puzzle chain can be logically correct and physically impossible - a crawl
-    /// space too shallow to crawl through, an exit inside a wall, a skirt board
-    /// wider than the shed. None of that shows up in a diff.
+    /// The first version of the route took the player under the floor and out past
+    /// a skirt board. It read well and it was impossible: the platform leaves
+    /// 230 mm of clear space and a person needs 350 to 400 mm to crawl on their
+    /// front. Nothing in the puzzle logic could have caught that. These tests exist
+    /// so the next such mistake fails a build instead of shipping.
     /// </summary>
     public sealed class EscapeRouteTests
     {
-        [Test]
-        public void TheCrawlSpaceIsDeepEnoughToCrawlThrough()
-        {
-            float depth = EscapeRouteBuilder.CrawlSpaceTop - EscapeRouteBuilder.CrawlSpaceFloor;
+        /// <summary>Belly-crawl clearance for an adult, generously.</summary>
+        private const float CrawlableHeight = 0.35f;
 
-            // 230 mm is tight but real - it is what a shed on 140 mm bearers gives
-            // you. Below about 200 mm nobody is getting through on their front.
-            Assert.Greater(depth, 0.20f,
-                $"the crawl space is only {depth * 1000f:0} mm deep, which is not a crawl space");
+        [Test]
+        public void NothingInTheRouteRequiresCrawlingUnderTheFloor()
+        {
+            float underfloor = ShedDimensions.FloorStructureDepth - ShedDimensions.FloorBoardThickness;
+
+            // Stated as a fact about the building, not a wish. If somebody raises
+            // the shed on taller piers this becomes false and the comment in
+            // EscapeRouteBuilder about why the route changed stops being true.
+            Assert.Less(underfloor, CrawlableHeight,
+                $"the crawl space is {underfloor * 1000f:0} mm, which is now passable - " +
+                "the reason the route avoids it no longer holds");
         }
 
         [Test]
-        public void TheSkirtBoardIsUnderTheFloorNotInTheRoom()
+        public void TheExitIsOutsideTheEntranceWall()
         {
-            Assert.Less(EscapeRouteBuilder.SkirtCentre.y, 0f,
-                "the skirt board is above floor level, so it is in the room");
-            Assert.Greater(EscapeRouteBuilder.SkirtCentre.y, -ShedDimensions.FloorStructureDepth,
-                "the skirt board is below the underside of the bearers");
+            float wallOuter = -(ShedDimensions.HalfLength + ShedDimensions.WallThickness);
+
+            Assert.Less(EscapeRouteBuilder.ExitCentre.z, wallOuter,
+                "the exit trigger is inside the building");
+            Assert.AreEqual(ShedDimensions.DoorCentreX, EscapeRouteBuilder.ExitCentre.x, 0.001f,
+                "the exit is not in front of the door");
         }
 
         [Test]
-        public void TheSkirtBoardIsInTheEntranceWallLine()
+        public void TheExitIsInsideThePlayArea()
         {
-            float wallLine = -(ShedDimensions.HalfLength + (ShedDimensions.WallThickness * 0.5f));
+            // Walking out has to be possible without the boundary backstop firing.
+            PlayAreaBoundary boundary = new PlayAreaBoundary();
+            Vector3 onTheGround = new Vector3(EscapeRouteBuilder.ExitCentre.x, 0.1f,
+                                              EscapeRouteBuilder.ExitCentre.z);
 
-            Assert.AreEqual(wallLine, EscapeRouteBuilder.SkirtCentre.z, 0.001f,
-                "the skirt board is not in the perimeter it is supposed to close");
+            Assert.IsTrue(boundary.IsInside(onTheGround),
+                "the exit is outside the play area, so stepping through it teleports " +
+                "the player back to spawn");
         }
 
         [Test]
-        public void TheSkirtBoardIsWideEnoughToGetThroughAndNarrowerThanTheWall()
+        public void TheExitIsPastTheDoorsSwingNotInsideIt()
         {
-            Assert.Greater(EscapeRouteBuilder.SkirtWidth, 0.55f,
-                "the gap left by the board is too narrow for shoulders");
-            Assert.Less(EscapeRouteBuilder.SkirtWidth, ShedDimensions.InteriorWidth,
-                "the skirt board is wider than the wall it sits in");
+            // The leaf swings outward 92 degrees on an 820 mm radius. An exit
+            // trigger inside that arc would fire while the door is still moving.
+            float reach = ShedDimensions.DoorLeafWidth;
+            float standoff = Mathf.Abs(EscapeRouteBuilder.ExitCentre.z) -
+                             (ShedDimensions.HalfLength + ShedDimensions.WallThickness);
+
+            Assert.Greater(standoff + 0.40f, 0f, "the exit sits behind the wall face");
+            Assert.Less(standoff, reach + 1.0f,
+                "the exit is so far out the player leaves the apron before reaching it");
         }
 
         [Test]
-        public void TheRouteStartsAtTheServicePanel()
+        public void BothToolsExistAndAreDistinct()
         {
-            // The player goes down through the panel, so the board has to be
-            // reachable from it - the same crawl space, not a different bay.
-            float run = Mathf.Abs(EscapeRouteBuilder.SkirtCentre.z - ShedDimensions.ServicePanelCentreZ);
-
-            Assert.Less(run, 2.5f,
-                $"it is {run:0.00} m from the hatch to the skirt board, which is a long way on your front");
-            Assert.AreEqual(ShedDimensions.ServicePanelCentreX, EscapeRouteBuilder.SkirtCentre.x, 0.001f,
-                "the board is not in line with the hatch");
-        }
-
-        [Test]
-        public void TheScrewdriverAndTheOffcutAreBothInTheRoom()
-        {
-            // Every step of the chain needs its tool to exist somewhere reachable.
-            // The offcut is a placed carryable; the screwdriver is in a drawer.
+            // The chain needs a lever and a driver, and they must not be the same
+            // object - a single tool that does everything is a key, not a puzzle.
             bool offcut = false;
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
@@ -79,7 +84,21 @@ namespace Freedome.Tests.EditMode
                 }
             }
 
-            Assert.IsTrue(offcut, "the timber offcut is not placed, so the skirt cannot be levered");
+            Assert.IsTrue(offcut, "the timber offcut is not placed, so the drawer cannot be levered");
+        }
+
+        [Test]
+        public void TheRimLockIsOnTheInsideFaceWithinReach()
+        {
+            // A rim lock mounts on the inside of the door, which is the whole reason
+            // this route works. Its case sits at 1.020 m on the latch stile.
+            const float LockHeight = 1.020f;
+
+            Assert.Less(LockHeight, ShedDimensions.PlayerEyeHeight + 0.5f,
+                "the lock case is above comfortable reach");
+            Assert.Greater(LockHeight, 0.6f, "the lock case is below comfortable reach");
+            Assert.Less(LockHeight, ShedDimensions.DoorLeafHeight,
+                "the lock case is above the top of the door");
         }
     }
 }

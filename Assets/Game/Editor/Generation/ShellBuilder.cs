@@ -300,9 +300,10 @@ namespace Freedome.EditorTools.Generation
                                Vector3.right, -78f, 110f, null);
                 part.Gate(false, true, "Screwed down at four corners");
 
-                // The screws. They were modelled into the panel long before anything
-                // used them, which is why the panel reads as an ordinary piece of
-                // floor rather than as a lid somebody put there for the player.
+                // The screws. Not part of the way out - under the panel is 230 mm of
+                // joists and dirt, which is what is actually under a shed on bearers.
+                // It stays because a building where only the useful things open is a
+                // building that tells you which things are useful.
                 GameObject screws = new GameObject("ServicePanel_Screws");
                 screws.transform.SetParent(panel.transform, false);
                 screws.transform.localPosition = Vector3.zero;

@@ -396,3 +396,35 @@ anybody needed them, and a player who looks at them can work it out.
 **Unverified, like everything else.** Nobody has played this. In particular
 nobody knows whether the chain is discoverable without a hint, which is the only
 question that actually matters about it and the one arithmetic cannot answer.
+
+
+---
+
+## The first escape route was physically impossible
+
+**Found** by following up the risk that had been written into KNOWN_ISSUES as
+"the one most likely to simply not work": whether a character controller can get
+down the hatch.
+
+It cannot, and neither can a person. The floor platform is floorboards on 90 mm
+joists on 140 mm bearers, so the void under the shed is **230 mm** of clear
+space. A person needs 350 to 400 mm to crawl on their front. The route was not
+awkward in Unity - it was impossible in the world, which is exactly why nobody
+in reality escapes from under a shed.
+
+Nothing in the puzzle logic could have caught this. Every step was individually
+sound: the panel unscrews, the panel lifts, the skirt levers off, the trigger
+fires. The chain was coherent and the space it happened in did not exist.
+
+**The route now.** A rim lock is screwed to the *inside* face of a door - that
+is the difference between a rim lock and a mortice - so on a locked door the
+fixing screws are on the player's side of it. Take the case off and the door
+opens. The offcut opens a swollen drawer to reach the screwdriver.
+
+This uses the same two tools and the same reasoning about what the building
+already contains, and it has the advantage of being possible.
+
+**The check that stops it recurring.** `NothingInTheRouteRequiresCrawlingUnderTheFloor` asserts the underfloor void is *less* than crawlable. Stated that way
+round on purpose: if somebody later raises the shed on taller piers, the test
+fails and forces a reread of why the route avoids the crawl space, rather than
+quietly passing while the comment goes stale.

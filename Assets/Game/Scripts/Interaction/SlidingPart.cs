@@ -16,6 +16,10 @@ namespace Freedome.Interaction
         [SerializeField] private Vector3 slideAxis = Vector3.left;
         [SerializeField] private float travel = 0.34f;
         [SerializeField] private float metresPerSecond = 0.6f;
+        [SerializeField] private bool needsForcing;
+        [SerializeField] private string stuckPrompt = "Swollen shut";
+
+        private EscapeState _escape;
 
         private Vector3 _closedPosition;
         private float _offset;
@@ -34,16 +38,33 @@ namespace Freedome.Interaction
 
         public override string Prompt
         {
-            get { return IsOpen ? openVerb : closedVerb; }
+            get { return IsStuck ? stuckPrompt : IsOpen ? openVerb : closedVerb; }
         }
 
         private void Awake()
         {
+            _escape = EscapeState.Find();
             _closedPosition = transform.localPosition;
+        }
+
+        public bool IsStuck
+        {
+            get { return needsForcing && (_escape == null || !_escape.DrawerForced); }
+        }
+
+        public void RequireForcing(string prompt)
+        {
+            needsForcing = true;
+            stuckPrompt = prompt;
         }
 
         public override void Interact(PlayerInteractor actor)
         {
+            if (IsStuck)
+            {
+                return;
+            }
+
             _target = IsOpen ? 0f : travel;
         }
 

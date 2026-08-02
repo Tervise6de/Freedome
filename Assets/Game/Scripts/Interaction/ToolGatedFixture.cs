@@ -20,8 +20,9 @@ namespace Freedome.Interaction
     {
         public enum Effect
         {
+            ForceDrawer,
+            RemoveLock,
             UnscrewPanel,
-            LeverSkirt,
         }
 
         [SerializeField] private string requiredItem = "screwdriver";
@@ -46,7 +47,12 @@ namespace Freedome.Interaction
                     return false;
                 }
 
-                return effect == Effect.UnscrewPanel ? _state.PanelUnscrewed : _state.SkirtRemoved;
+                switch (effect)
+                {
+                    case Effect.ForceDrawer: return _state.DrawerForced;
+                    case Effect.RemoveLock: return _state.LockRemoved;
+                    default: return _state.PanelUnscrewed;
+                }
             }
         }
 
@@ -89,13 +95,11 @@ namespace Freedome.Interaction
                 return;
             }
 
-            if (effect == Effect.UnscrewPanel)
+            switch (effect)
             {
-                _state.SetPanelUnscrewed();
-            }
-            else
-            {
-                _state.SetSkirtRemoved();
+                case Effect.ForceDrawer: _state.SetDrawerForced(); break;
+                case Effect.RemoveLock: _state.SetLockRemoved(); break;
+                default: _state.SetPanelUnscrewed(); break;
             }
         }
 

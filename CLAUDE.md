@@ -38,13 +38,17 @@ One route out, four beats:
 
 | Beat | Object | Why it is credible |
 | --- | --- | --- |
-| The door is locked | rim lock, no key | The bolt works. The lock does not. It is the dead end that starts the search |
-| Unscrew the floor panel | screwdriver, bench drawer | The panel has had four countersunk screws modelled in it since the environment milestone |
-| Lift the panel | the hinge already built | The shed stands on piers, so there is a real crawl space under it |
-| Lever off the skirt board | timber offcut | Nailed, not screwed - so the screwdriver is the wrong tool and a 400 mm length of 90x45 is the right one |
+| The door is locked | rim lock, no key | The first thing anybody tries, and the reason they start looking at the rest of the building |
+| The top drawer is swollen shut | timber offcut | A damp shed does this. It is why the offcut is worth picking up before you know what for |
+| The screwdriver is in that drawer | — | Where a screwdriver lives |
+| Take the rim lock case off the door | screwdriver | A rim lock mounts on the **inside** face - that is what makes it a rim lock rather than a mortice - so its fixing screws are on the player's side of a locked door |
 
-Then you crawl out. `EscapeState` holds three booleans and an event; that is the
+Then you walk out. `EscapeState` holds four booleans and an event; that is the
 entire game state.
+
+The service panel still unscrews and still lifts, and under it is 230 mm of
+joists and dirt. It is a dead end on purpose: a building where only the useful
+things open is a building that tells you which things are useful.
 
 ### Still not in, and not to be added without asking
 

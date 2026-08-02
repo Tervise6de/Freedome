@@ -16,11 +16,20 @@ namespace Freedome.Interaction
     /// </summary>
     public sealed class EscapeState : MonoBehaviour
     {
-        /// <summary>The four screws holding the service panel down are out.</summary>
-        public bool PanelUnscrewed { get; private set; }
+        /// <summary>The swollen bench drawer has been levered open.</summary>
+        public bool DrawerForced { get; private set; }
 
-        /// <summary>The skirt board under the floor has been levered off.</summary>
-        public bool SkirtRemoved { get; private set; }
+        /// <summary>The rim lock case is off the inside face of the door.</summary>
+        public bool LockRemoved { get; private set; }
+
+        /// <summary>
+        /// The four screws holding the service panel down are out. Not part of the
+        /// way out - lifting the panel shows you 230 mm of joists and dirt, which is
+        /// what is actually under a shed on bearers. It is a dead end that rewards
+        /// looking, and it stays in because a building where only the useful things
+        /// open is a building that tells you which things are useful.
+        /// </summary>
+        public bool PanelUnscrewed { get; private set; }
 
         /// <summary>The player has crawled out.</summary>
         public bool Escaped { get; private set; }
@@ -31,6 +40,28 @@ namespace Freedome.Interaction
         public static EscapeState Find()
         {
             return FindAnyObjectByType<EscapeState>();
+        }
+
+        public void SetDrawerForced()
+        {
+            if (DrawerForced)
+            {
+                return;
+            }
+
+            DrawerForced = true;
+            Changed?.Invoke();
+        }
+
+        public void SetLockRemoved()
+        {
+            if (LockRemoved)
+            {
+                return;
+            }
+
+            LockRemoved = true;
+            Changed?.Invoke();
         }
 
         public void SetPanelUnscrewed()
@@ -44,20 +75,9 @@ namespace Freedome.Interaction
             Changed?.Invoke();
         }
 
-        public void SetSkirtRemoved()
-        {
-            if (SkirtRemoved)
-            {
-                return;
-            }
-
-            SkirtRemoved = true;
-            Changed?.Invoke();
-        }
-
         public void SetEscaped()
         {
-            if (Escaped || !SkirtRemoved)
+            if (Escaped || !LockRemoved)
             {
                 return;
             }
@@ -69,8 +89,9 @@ namespace Freedome.Interaction
         /// <summary>Puts everything back. Used by the pause menu's restart.</summary>
         public void Reset()
         {
+            DrawerForced = false;
+            LockRemoved = false;
             PanelUnscrewed = false;
-            SkirtRemoved = false;
             Escaped = false;
             Changed?.Invoke();
         }
