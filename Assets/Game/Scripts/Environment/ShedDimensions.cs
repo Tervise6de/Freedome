@@ -193,6 +193,12 @@ namespace Freedome.Environment
         public const float UtilityShelfHeight = 1.100f;
         public const float UtilityShelfCentreX = -1.000f;
 
+        /// <summary>
+        /// Top face of the utility shelf board. UtilityShelfHeight is the board's
+        /// centre line, so anything standing on the shelf needs this instead.
+        /// </summary>
+        public static float UtilityShelfTopY => UtilityShelfHeight + (BoardThickness * 0.5f);
+
         public const float LightSwitchX = -0.300f;
         public const float LightSwitchY = 1.150f;
 

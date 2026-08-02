@@ -88,7 +88,8 @@ namespace Freedome.EditorTools.Generation
             BuildDrawerBank(ctx, parent, mb, new Vector3(0f, 0f, halfL - 0.34f), d, legTop, benchOrigin);
 
             // --- small cupboard at the near end -------------------------------
-            BuildCupboard(mb, new Vector3(0f, 0f, -halfL + 0.36f), d, legTop);
+            BuildCupboard(ctx, parent, mb, new Vector3(0f, 0f, -halfL + 0.36f), d, legTop,
+                          benchOrigin);
 
             // --- bench vice ----------------------------------------------------
             BuildVice(mb, new Vector3(-halfD + 0.010f, h, -halfL + 0.42f));
@@ -457,9 +458,11 @@ namespace Freedome.EditorTools.Generation
             carry.SetRestingInContainer(true);
         }
 
-        private static void BuildCupboard(MeshBuilder mb, Vector3 centre, float depth, float legTop)
+        private static void BuildCupboard(BuildContext ctx, Transform parent, MeshBuilder mb,
+                                          Vector3 centre, float depth, float legTop,
+                                          Vector3 benchOrigin)
         {
-            const float Width = 0.66f;
+            const float Width = CupboardWidth;
             float top = legTop - 0.10f;
             float bottom = 0.26f;
             float height = top - bottom;
@@ -472,6 +475,12 @@ namespace Freedome.EditorTools.Generation
                 mb.AddBox(new Vector3(0f, bottom + (height * 0.5f), sz * (Width * 0.5f)),
                           new Vector3(d, height, Dim.BoardThickness), 0, 0.002f);
             }
+
+            // A bottom to stand things on. The carcass had sides and a back and
+            // nothing underneath, so anything put in the cupboard would have fallen
+            // straight through to the floor.
+            mb.AddBox(new Vector3(0f, bottom + (Dim.BoardThickness * 0.5f), 0f),
+                      new Vector3(d, Dim.BoardThickness, Width - 0.004f), 0, 0.002f);
 
             // The same face frame as the drawer bank, for the same reason: doors that
             // meet the carcass edge to edge in the same timber read as one lump of
@@ -494,25 +503,79 @@ namespace Freedome.EditorTools.Generation
                                       Width - (FaceFrameStile * 2f)), 0, 0.0035f);
             }
 
-            // Two doors, one left slightly ajar because nobody ever closes both.
-            float hangX = -(d * 0.5f) - FaceFrameThickness + DrawerReveal + 0.009f;
+            mb.Pop();
+
+            // The two doors are their own objects, hung on their own hinges, because
+            // they open. Everything else about the cupboard stays in the shared bench
+            // mesh; see DECISIONS #4 for why that is the default and this is not.
+            BuildCupboardDoors(ctx, parent, benchOrigin + centre, d, bottom + (height * 0.5f),
+                               Width, openingH);
+        }
+
+        /// <summary>Clear width of one cupboard door leaf.</summary>
+        public static float CupboardLeafWidth =>
+            ((CupboardWidth - (FaceFrameStile * 2f)) * 0.5f) - (DrawerReveal * 1.5f);
+
+        public const float CupboardWidth = 0.66f;
+
+        /// <summary>Top face of the cupboard bottom - what its contents rest on.</summary>
+        public static float CupboardShelfY => DrawerCarcassBottom + Dim.BoardThickness;
+
+        /// <summary>World Z of the cupboard's centre, for placing things in it.</summary>
+        public static float CupboardCentreZ => Dim.BenchStartZ + 0.36f;
+
+        /// <summary>World X of the bench carcass centre.</summary>
+        public static float BenchCentreX => Dim.BenchFrontX + (Dim.BenchDepth * 0.5f);
+
+        private static void BuildCupboardDoors(BuildContext ctx, Transform parent, Vector3 origin,
+                                               float carcassDepth, float midY, float width,
+                                               float openingHeight)
+        {
+            float hangX = -(carcassDepth * 0.5f) - FaceFrameThickness + DrawerReveal + 0.009f;
+            float leaf = CupboardLeafWidth;
+
             for (int i = 0; i < 2; i++)
             {
                 int sz = i == 0 ? -1 : 1;
-                float leaf = ((Width - (FaceFrameStile * 2f)) * 0.5f) - (DrawerReveal * 1.5f);
-                float ajar = i == 1 ? 6f : 0f;
 
-                mb.Push(new Vector3(hangX, bottom + (height * 0.5f),
-                                    sz * ((Width * 0.5f) - FaceFrameStile - DrawerReveal)),
-                        Quaternion.Euler(0f, sz * ajar, 0f));
+                // 0 pine, 1 hardware
+                MeshBuilder mb = new MeshBuilder($"CupboardDoor_{i}", 2);
                 mb.AddBox(new Vector3(0f, 0f, -sz * leaf * 0.5f),
-                          new Vector3(0.018f, openingH - (DrawerReveal * 2f), leaf), 0, 0.005f);
+                          new Vector3(0.018f, openingHeight - (DrawerReveal * 2f), leaf), 0, 0.005f);
                 mb.AddCylinder(new Vector3(-0.020f, 0f, -sz * (leaf - 0.045f)),
                                0.014f, 0.017f, 0.026f, 12, 0, Quaternion.Euler(0f, 0f, 90f));
-                mb.Pop();
-            }
 
-            mb.Pop();
+                // Two butt hinges on the hanging stile, which is the edge this pivots on.
+                foreach (int sy in new[] { -1, 1 })
+                {
+                    mb.AddBox(new Vector3(-0.010f, sy * (openingHeight * 0.32f), 0.002f),
+                              new Vector3(0.004f, 0.055f, 0.030f), 1, 0.001f);
+                }
+
+                GameObject hinge = ctx.CreateGroup($"CupboardHinge_{i}", parent);
+                hinge.transform.localPosition = origin +
+                    new Vector3(hangX, midY, sz * ((width * 0.5f) - FaceFrameStile - DrawerReveal));
+                BuildContext.MarkMovable(hinge);
+
+                GameObject door = ctx.CreateObject($"CupboardDoor_{i}", mb,
+                    new[] { Keys.StructuralPine, Keys.Hardware },
+                    hinge.transform, Vector3.zero, Quaternion.identity,
+                    BuildContext.ColliderKind.Box, isStatic: false);
+
+                if (door == null)
+                {
+                    continue;
+                }
+
+                HingedPart part = hinge.AddComponent<HingedPart>();
+                // One starts ajar, because nobody ever closes both.
+                part.Configure("Open the cupboard", "Close the cupboard", Vector3.up,
+                               sz * 105f, 220f, null);
+                if (i == 1)
+                {
+                    part.StartAt(sz * 8f);
+                }
+            }
         }
 
         /// <summary>
@@ -622,16 +685,22 @@ namespace Freedome.EditorTools.Generation
             mb.AddBox(new Vector3(0.028f, 0.100f, -0.170f), new Vector3(0.024f, 0.110f, 0.050f), Timber, 0.005f);
             mb.Pop();
 
-            // Screwdrivers and pliers, hung along the bottom.
-            float[] driverZ = { -0.290f, -0.238f, -0.185f };
-            float[] driverLen = { 0.190f, 0.230f, 0.165f };
-            for (int i = 0; i < driverZ.Length; i++)
+            // Three bare hooks along the bottom, where three screwdrivers used to
+            // hang.
+            //
+            // They were geometry, not carryables, so the shed spent the whole game
+            // showing the player three screwdrivers on a wall while the only one
+            // they could actually pick up was shut in a drawer. Nothing about the
+            // route is signposted, but the room should not actively lie either. An
+            // empty hook is the most ordinary thing on a pegboard.
+            float[] hookZ = { -0.290f, -0.238f, -0.185f };
+            foreach (float hz in hookZ)
             {
-                mb.Push(new Vector3(faceX, -0.290f, driverZ[i]), Quaternion.Euler(0f, 0f, (i - 1) * 3f));
-                mb.AddCylinder(new Vector3(0.020f, -0.045f, 0f), 0.014f, 0.011f, 0.090f, 10, Timber,
+                mb.Push(new Vector3(faceX, -0.290f, hz));
+                mb.AddCylinder(new Vector3(0.012f, 0f, 0f), 0.0028f, 0.0028f, 0.024f, 8, Metal,
+                               Quaternion.Euler(0f, 0f, 90f));
+                mb.AddCylinder(new Vector3(0.023f, -0.010f, 0f), 0.0028f, 0.0028f, 0.022f, 8, Metal,
                                Quaternion.identity);
-                mb.AddCylinder(new Vector3(0.020f, -0.045f - (driverLen[i] * 0.5f), 0f),
-                               0.004f, 0.004f, driverLen[i], 8, Metal, Quaternion.identity);
                 mb.Pop();
             }
 

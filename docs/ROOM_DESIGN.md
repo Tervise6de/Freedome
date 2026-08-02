@@ -92,7 +92,7 @@ clockwise from the door:
 - Window directly over the bench, sill at 1.200 m so it clears the bench top and
   whatever is standing on it.
 - Pegboard from z = -0.60 to +0.10, 1.000 to 1.900 m up, on battens: hammer,
-  hacksaw, three screwdrivers, pliers, a try square.
+  hacksaw, pliers, a try square, and three bare hooks.
 - Small tool rack shelf on the far side of the window with three cup hooks.
 - Clamp task light on the pegboard batten, aimed down across the bench.
 

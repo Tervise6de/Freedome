@@ -173,6 +173,14 @@ third-party content.
 | `Carry_FixingsJar` | `PropLibrary.FixingsJar` | Glass, Hardware | 115 mm jar, 0.7 kg |
 | `Carry_WateringCan` | `PropLibrary.WateringCan` | Galvanised | 1.8 kg |
 | `Carry_Offcut` | `PropLibrary.Timber` | StructuralPine | 400 mm of 90 x 45, 1.2 kg |
+| `Carry_Screwdriver` | inline | PaintedRed, DarkSteel | Turned handle, ferrule, shank, flat tip. In the top drawer |
+| `Carry_FoldingRule` | inline | StructuralPine, Hardware | Two leaves on a brass hinge, in the lower drawer |
+| `Carry_HandPlane` | inline | DarkSteel, StructuralPine | 240 mm smoothing plane, 1.6 kg. On the bench past the vice |
+| `Carry_Torch` | inline | ElectricalPlastic, Glass | Rubber-bodied, 0.4 kg. Does not switch on |
+| `Carry_NailTin` | inline | PaintedGreen, Hardware | Tobacco tin, 0.9 kg. In the bench cupboard |
+| `Carry_Paintbrush` | inline | StructuralPine, Hardware, PaintedGreen | 50 mm brush, gone hard. In the bench cupboard |
+| `CupboardDoor_0/1` | inline | StructuralPine, Hardware | Split out of the bench mesh so they can open |
+| `Door_RimLockShell` | inline | Hardware | Split out of the door leaf so unscrewing it removes it |
 | `LightSwitch_Rocker` | inline box | Hardware | Split out of the shared electrical mesh |
 
 The door leaf and the service panel are not new - they already existed as their

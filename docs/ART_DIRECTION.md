@@ -317,6 +317,25 @@ improvements either way:
   eaves blocking a sheet of constant height to meet - so the crescents of
   daylight LIGHTING.md describes did not exist as geometry at all.
 
+## Structure that is fixed to something
+
+Timber in this shed used to meet other timber and stop there. Four additions,
+all of them the actual connection the piece relies on:
+
+- **Coach bolts through every collar tie lap.** A collar tie is the one member
+  the player sees the whole length of, and it was resting against the rafter
+  with nothing holding it.
+- **Galvanised straps over each rafter onto the top plate.** This is the joint
+  that stops a shed roof lifting off, it sits exactly where the eye goes at the
+  eaves, and the structure had no ironmongery in it at all.
+- **Nail heads down every stud line in the interior lining**, at 300 mm. The
+  lining is the largest continuous surface in the building; flat and unfixed it
+  reads as a texture rather than as sheets somebody put up.
+- **Staggered butt joints in the floorboards**, over joists, four joists used in
+  rotation. A 6.9 m floorboard does not exist. An unbroken run over the largest
+  surface in the room reads as one sheet of timber.
+
+
 ## Making one thing look like two things
 
 A shed's furniture is all the same timber, so what separates a drawer from the

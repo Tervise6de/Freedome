@@ -45,8 +45,8 @@ namespace Freedome.Tests.EditMode
 
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
-                Assert.IsTrue(hull.Contains(new Vector3(p.Base.x, Mathf.Max(p.Base.y, hull.min.y),
-                                                        p.Base.z)),
+                Vector3 at = p.Position;
+                Assert.IsTrue(hull.Contains(new Vector3(at.x, Mathf.Max(at.y, hull.min.y), at.z)),
                     $"{p.Name} starts outside the probe hull, so it is lit by whatever " +
                     "tetrahedron it happens to clamp to");
             }
@@ -104,23 +104,36 @@ namespace Freedome.Tests.EditMode
         {
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
-                Assert.Less(Mathf.Abs(p.Base.x), ShedDimensions.HalfWidth - WallClearance,
-                    $"{p.Name} at x={p.Base.x:0.00} is in or through a long wall");
-                Assert.Less(Mathf.Abs(p.Base.z), ShedDimensions.HalfLength - WallClearance,
-                    $"{p.Name} at z={p.Base.z:0.00} is in or through an end wall");
+                Assert.Less(Mathf.Abs(p.Position.x), ShedDimensions.HalfWidth - WallClearance,
+                    $"{p.Name} at x={p.Position.x:0.00} is in or through a long wall");
+                Assert.Less(Mathf.Abs(p.Position.z), ShedDimensions.HalfLength - WallClearance,
+                    $"{p.Name} at z={p.Position.z:0.00} is in or through an end wall");
             }
         }
 
         [Test]
         public void CarryablesRestOnASurfaceNotInMidAir()
         {
+            // Every height something is allowed to start at, and the thing that
+            // holds it up. A loose object at any other height is hovering.
+            float[] surfaces =
+            {
+                0f,
+                ShedDimensions.BenchHeight,
+                ShedDimensions.UtilityShelfTopY,
+                FixturesBuilder.CupboardShelfY,
+            };
+
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
-                bool onFloor = Mathf.Approximately(p.Base.y, 0f);
-                bool onBench = Mathf.Approximately(p.Base.y, ShedDimensions.BenchHeight);
+                bool supported = false;
+                foreach (float y in surfaces)
+                {
+                    supported |= Mathf.Abs(p.Position.y - y) < 0.001f;
+                }
 
-                Assert.IsTrue(onFloor || onBench,
-                    $"{p.Name} starts at y={p.Base.y:0.000}, which is neither the floor nor the bench");
+                Assert.IsTrue(supported,
+                    $"{p.Name} starts at y={p.Position.y:0.000}, which is not a surface in this shed");
             }
         }
 
@@ -129,16 +142,16 @@ namespace Freedome.Tests.EditMode
         {
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
-                if (!Mathf.Approximately(p.Base.y, ShedDimensions.BenchHeight))
+                if (!Mathf.Approximately(p.Position.y, ShedDimensions.BenchHeight))
                 {
                     continue;
                 }
 
-                Assert.Greater(p.Base.x, ShedDimensions.BenchFrontX,
+                Assert.Greater(p.Position.x, ShedDimensions.BenchFrontX,
                     $"{p.Name} sits at bench height but in front of the bench, so it would fall");
-                Assert.Greater(p.Base.z, ShedDimensions.BenchStartZ,
+                Assert.Greater(p.Position.z, ShedDimensions.BenchStartZ,
                     $"{p.Name} is past the near end of the bench");
-                Assert.Less(p.Base.z, ShedDimensions.BenchEndZ,
+                Assert.Less(p.Position.z, ShedDimensions.BenchEndZ,
                     $"{p.Name} is past the far end of the bench");
             }
         }
@@ -152,20 +165,20 @@ namespace Freedome.Tests.EditMode
 
             foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
             {
-                if (!Mathf.Approximately(p.Base.y, 0f))
+                if (!Mathf.Approximately(p.Position.y, 0f))
                 {
                     continue;
                 }
 
                 // The entrance mat area is not part of the through-route; an object
                 // just inside the door is normal and is walked around.
-                if (p.Base.z < -1.8f)
+                if (p.Position.z < -1.8f)
                 {
                     continue;
                 }
 
-                Assert.Greater(Mathf.Abs(p.Base.x), AisleHalfWidth,
-                    $"{p.Name} at x={p.Base.x:0.00} sits in the middle of the walking aisle");
+                Assert.Greater(Mathf.Abs(p.Position.x), AisleHalfWidth,
+                    $"{p.Name} at x={p.Position.x:0.00} sits in the middle of the walking aisle");
             }
         }
 
@@ -178,7 +191,7 @@ namespace Freedome.Tests.EditMode
             {
                 for (int j = i + 1; j < all.Length; j++)
                 {
-                    float distance = Vector3.Distance(all[i].Base, all[j].Base);
+                    float distance = Vector3.Distance(all[i].Position, all[j].Position);
                     Assert.Greater(distance, 0.30f,
                         $"{all[i].Name} and {all[j].Name} are {distance:0.00} m apart and would intersect");
                 }

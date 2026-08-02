@@ -176,6 +176,54 @@ namespace Freedome.EditorTools.Generation
         /// is what gives the floor its shadow lines, and the chamfered arris on every
         /// board edge is the single most effective anti-blockout detail in the scene.
         /// </summary>
+        /// <summary>
+        /// Nail heads down the line of every stud in the interior lining.
+        ///
+        /// The lining is the largest continuous surface in the shed and it had
+        /// nothing on it at all - a flat plane between studs, which reads as a
+        /// texture rather than as a sheet somebody fixed to a wall. A line of heads
+        /// at 300 mm is what actually holds it up, and at eye level it is the detail
+        /// that says the wall is made of parts.
+        /// </summary>
+        private static void AddLiningFixings(MeshBuilder mb, float length,
+                                             List<FramingUtility.Opening> openings, float faceZ)
+        {
+            const float Spacing = 0.300f;
+
+            for (float x = Dim.StudSpacing; x < length - 0.05f; x += Dim.StudSpacing)
+            {
+                for (float y = 0.30f; y < Dim.WallHeight - 0.10f; y += Spacing)
+                {
+                    bool inOpening = false;
+                    foreach (FramingUtility.Opening o in openings)
+                    {
+                        inOpening |= x > o.Start - 0.05f && x < o.End + 0.05f &&
+                                     y > o.Bottom - 0.05f && y < o.Top + 0.05f;
+                    }
+
+                    if (inOpening)
+                    {
+                        continue;
+                    }
+
+                    mb.AddCylinder(new Vector3(x, y, faceZ - 0.0005f), 0.0038f, 0.0030f, 0.0016f,
+                                   6, 1, Quaternion.Euler(-90f, 0f, 0f));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Z of the butt joint in board <paramref name="index"/>, always on a joist
+        /// centre and never on the same joist as the board beside it. Four joists
+        /// used in rotation, which is the usual rule of thumb and keeps the joints
+        /// from lining up into a visible seam across the floor.
+        /// </summary>
+        public static float ButtJointZ(int index)
+        {
+            float[] joists = { -1.2f, 0.6f, -0.6f, 1.2f };
+            return joists[index % joists.Length];
+        }
+
         private static void BuildDeck(BuildContext ctx, Transform parent)
         {
             MeshBuilder mb = new MeshBuilder("Shed_Floorboards", 1);
@@ -216,8 +264,18 @@ namespace Freedome.EditorTools.Generation
                 }
                 else
                 {
-                    mb.AddBox(new Vector3(cx, y, 0f),
-                              new Vector3(w, Dim.FloorBoardThickness, deckL * 2f), 0, 0.0015f);
+                    // Boards come in lengths, not in buildings. A 6.9 m board does
+                    // not exist, so each run is butted over a joist, and the joint
+                    // is staggered from its neighbour's - which is both what a floor
+                    // layer does and what stops the largest surface in the room
+                    // reading as one continuous sheet of timber.
+                    float joint = ButtJointZ(board);
+                    mb.AddBox(new Vector3(cx, y, (-deckL + joint) * 0.5f),
+                              new Vector3(w, Dim.FloorBoardThickness, joint + deckL - 0.0015f),
+                              0, 0.0015f);
+                    mb.AddBox(new Vector3(cx, y, (joint + deckL) * 0.5f),
+                              new Vector3(w, Dim.FloorBoardThickness, deckL - joint - 0.0015f),
+                              0, 0.0015f);
                 }
 
                 x += w;
@@ -370,6 +428,8 @@ namespace Freedome.EditorTools.Generation
                 Dim.CladdingThickness, claddingZ, openings, 2, 0.002f);
 
             mb.GrainOverride = null;
+
+            AddLiningFixings(mb, frame.Length, openings, sheathingZ + Dim.BoardThickness);
 
             if (isGable)
             {

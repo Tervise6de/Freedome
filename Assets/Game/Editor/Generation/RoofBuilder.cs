@@ -191,6 +191,50 @@ namespace Freedome.EditorTools.Generation
                 float zz = z + (Dim.RafterWidth * 0.5f) + (Dim.CollarTieThickness * 0.5f);
                 mb.AddBox(new Vector3(0f, collarUnder + 0.045f, zz),
                           new Vector3(collarHalfSpan * 2f, 0.090f, Dim.CollarTieThickness), 0, Bevel);
+
+                // Two coach bolts through each lap. A collar tie is the one piece of
+                // the roof the player can see the whole length of, and floating
+                // against the rafter with nothing holding it is what makes a roof
+                // read as modelled rather than built.
+                foreach (int sx in new[] { -1, 1 })
+                {
+                    foreach (float inset in new[] { 0.035f, 0.085f })
+                    {
+                        float bx = sx * (collarHalfSpan - inset);
+                        mb.AddCylinder(new Vector3(bx, collarUnder + 0.045f,
+                                                   zz - (Dim.CollarTieThickness * 0.5f) - 0.004f),
+                                       0.0085f, 0.0085f, 0.008f, 8, 0,
+                                       Quaternion.Euler(90f, 0f, 0f));
+                    }
+                }
+            }
+
+            // Galvanised straps over each rafter, down onto the top plate. This is
+            // the connection that stops a shed roof lifting, it lives exactly where
+            // the eye goes at the eaves, and it was the one piece of ironmongery the
+            // structure had none of.
+            float plateTop = Dim.WallHeight;
+            foreach (float z in rafterZ)
+            {
+                if (Mathf.Abs(z) > Dim.HalfLength + 0.001f)
+                {
+                    continue;
+                }
+
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float x = side * (Dim.RoofHalfSpan - 0.020f);
+                    float overRafter = UndersideY(Mathf.Abs(x)) + Dim.RafterDepth + 0.004f;
+
+                    // Up the face of the rafter and over its top edge.
+                    mb.AddBox(new Vector3(x, (plateTop + overRafter) * 0.5f - 0.020f,
+                                          z + (Dim.RafterWidth * 0.5f) + 0.003f),
+                              new Vector3(0.030f, overRafter - plateTop + 0.040f, 0.0025f), 0, 0f);
+                    mb.AddBox(new Vector3(x - (side * 0.026f), overRafter,
+                                          z + (Dim.RafterWidth * 0.5f) + 0.003f),
+                              new Vector3(0.075f, 0.0025f, 0.0025f),
+                              SlopeRotation(side), 0, 0f);
+                }
             }
 
             // --- purlins, carrying the sheeting ---------------------------------

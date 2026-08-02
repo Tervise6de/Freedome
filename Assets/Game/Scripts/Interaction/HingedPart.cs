@@ -118,6 +118,22 @@ namespace Freedome.Interaction
             }
         }
 
+        /// <summary>
+        /// Starts the part part-way open, at a given angle rather than at its full
+        /// swing. A cupboard where both doors are shut looks like a cupboard nobody
+        /// has ever used; one standing 8 degrees ajar looks like a cupboard.
+        ///
+        /// The first press still closes it, because <see cref="IsOpen"/> is a
+        /// question about the target, not about being exactly at rest.
+        /// </summary>
+        public void StartAt(float angle)
+        {
+            startOpen = true;
+            _target = angle;
+            _angle = angle;
+            Apply();
+        }
+
         /// <summary>Holds it shut until the rim lock is off, or the panel screws are out.</summary>
         public void Gate(bool untilLockRemoved, bool untilPanelUnscrewed, string prompt)
         {

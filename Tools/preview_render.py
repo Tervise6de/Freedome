@@ -273,6 +273,7 @@ def build_shell(m):
     pz1 = D["ServicePanelCentreZ"] + D["ServicePanelLength"] / 2
 
     bw = D["FloorBoardWidth"]
+    board_index = 0
     x = -DECK_W
     while x < DECK_W - 1e-3:
         w = min(bw, DECK_W - x)
@@ -284,8 +285,15 @@ def build_shell(m):
             m.box((cx, -D["FloorBoardThickness"] / 2, (pz1 + DECK_L) / 2),
                   (w - 0.004, D["FloorBoardThickness"], DECK_L - pz1), col)
         else:
-            m.box((cx, -D["FloorBoardThickness"] / 2, 0.0),
-                  (w - 0.004, D["FloorBoardThickness"], DECK_L * 2), col)
+            # Staggered butt joints over joists, mirroring ShellBuilder.ButtJointZ:
+            # a 6.9 m floorboard does not exist, and an unbroken run reads as one
+            # sheet of timber rather than as a floor.
+            joint = (-1.2, 0.6, -0.6, 1.2)[board_index % 4]
+            m.box((cx, -D["FloorBoardThickness"] / 2, (-DECK_L + joint) / 2),
+                  (w - 0.004, D["FloorBoardThickness"], joint + DECK_L - 0.003), col)
+            m.box((cx, -D["FloorBoardThickness"] / 2, (joint + DECK_L) / 2),
+                  (w - 0.004, D["FloorBoardThickness"], DECK_L - joint - 0.003), col)
+        board_index += 1
         x += w
 
     # service panel
@@ -322,6 +330,19 @@ def build_shell(m):
         m.push(origin, rot_euler(0, yaw, 0))
         stud_wall(m, length, WALL_H, openings, PINE)
         panel_with_openings(m, length, WALL_H, BOARD, STUD_D, openings, PINE, cavity=0.72)
+        # Nail heads down every stud line. Mirrors ShellBuilder.AddLiningFixings:
+        # the lining is the largest surface in the room and had nothing on it.
+        sx = D["StudSpacing"]
+        n = 1
+        while sx * n < length - 0.05:
+            y = 0.30
+            while y < WALL_H - 0.10:
+                if not any(o[0] - 0.05 < sx * n < o[1] + 0.05
+                           and o[2] - 0.05 < y < o[3] + 0.05 for o in openings):
+                    m.cyl((sx * n, y, STUD_D + BOARD - 0.0005), 0.0038, 0.0030, 0.0016, 6,
+                          ZINC, rot_euler(-90, 0, 0))
+                y += 0.30
+            n += 1
         panel_with_openings(m, length, WALL_H, D["CladdingThickness"], STUD_D + BOARD,
                             openings, WEATHER)
         if is_gable:
@@ -361,6 +382,24 @@ def build_roof(m):
     for z in (-2.4, -1.2, 0.0, 1.2, 2.4):
         m.box((0.0, D["CollarTieHeight"] + 0.045, z + 0.04),
               (collar_half * 2, 0.09, D["CollarTieThickness"]), jitter(PINE, 0.08))
+        # Coach bolts through each lap. Mirrors RoofBuilder.
+        for sx in (-1, 1):
+            for inset in (0.035, 0.085):
+                m.cyl((sx * (collar_half - inset), D["CollarTieHeight"] + 0.045,
+                       z + 0.04 - D["CollarTieThickness"] / 2 - 0.004),
+                      0.0085, 0.0085, 0.008, 8, ZINC, rot_euler(90, 0, 0))
+
+    # Galvanised straps over each rafter onto the top plate.
+    for z in rafter_z:
+        if abs(z) > HL + 0.001:
+            continue
+        for side in (-1, 1):
+            x = side * (HALF_SPAN - 0.020)
+            over = roof_underside(abs(x)) + RAFTER_D + 0.004
+            m.box((x, (WALL_H + over) / 2 - 0.020, z + D["RafterWidth"] / 2 + 0.003),
+                  (0.030, over - WALL_H + 0.040, 0.0025), ZINC)
+            m.box((x - side * 0.026, over, z + D["RafterWidth"] / 2 + 0.003),
+                  (0.075, 0.0025, 0.0025), ZINC, slope_rot(side))
 
     for t in (0.30, 1.10, 1.90, 2.45):
         if t > length:
@@ -666,10 +705,13 @@ def build_pegboard(m):
     m.box((0.028, 0.10, -0.17), (0.024, 0.11, 0.05), PINE)
     m.pop()
 
-    for i, (dz, dl) in enumerate(((-0.29, 0.19), (-0.238, 0.23), (-0.185, 0.165))):
-        m.push((fx, -0.29, dz), rot_euler(0, 0, (i - 1) * 3))
-        m.cyl((0.02, -0.045, 0.0), 0.014, 0.011, 0.09, 10, RED)
-        m.cyl((0.02, -0.045 - dl / 2, 0.0), 0.004, 0.004, dl, 8, ZINC)
+    # Three bare hooks where three screwdrivers used to hang. Mirrors
+    # FixturesBuilder: the shed should not show the player three screwdrivers it
+    # will not let them pick up while the route needs one.
+    for dz in (-0.29, -0.238, -0.185):
+        m.push((fx, -0.29, dz))
+        m.cyl((0.012, 0.0, 0.0), 0.0028, 0.0028, 0.024, 8, ZINC, rot_euler(0, 0, 90))
+        m.cyl((0.023, -0.010, 0.0), 0.0028, 0.0028, 0.022, 8, ZINC)
         m.pop()
 
     m.push((fx, -0.25, 0.23), rot_euler(0, 0, -6))
@@ -741,6 +783,37 @@ def build_carryables(m):
     m.cyl((-1.55, 0.11, 1.45), 0.105, 0.115, 0.22, 12, GALV)
     m.cyl((-1.55 + 0.16, 0.15, 1.45), 0.022, 0.016, 0.24, 8, GALV,
           rot_euler(0, 0, 62))
+
+    # Hand plane on the bench beyond the vice.
+    m.push((1.62, D["BenchHeight"], -0.52), rot_euler(0, 24, 0))
+    m.box((0.0, 0.010, 0.0), (0.240, 0.020, 0.060), STEEL)
+    for sz in (-1, 1):
+        m.box((0.0, 0.042, sz * 0.024), (0.240, 0.044, 0.012), STEEL)
+    m.box((0.004, 0.052, 0.0), (0.075, 0.055, 0.040), STEEL, rot_euler(0, 0, 45))
+    m.box((-0.078, 0.062, 0.0), (0.022, 0.085, 0.030), jitter(PINE), rot_euler(0, 0, -16))
+    m.cyl((0.086, 0.048, 0.0), 0.014, 0.024, 0.046, 12, jitter(PINE))
+    m.pop()
+
+    # Torch on the utility shelf.
+    m.push((-1.10, D["UtilityShelfHeight"] + BOARD / 2, HL - 0.125), rot_euler(0, 0, -6))
+    m.cyl((-0.020, 0.026, 0.0), 0.026, 0.024, 0.130, 12, RUBBER, rot_euler(0, 0, 90))
+    m.cyl((0.055, 0.026, 0.0), 0.032, 0.026, 0.030, 12, GALV, rot_euler(0, 0, 90))
+    m.cyl((0.070, 0.026, 0.0), 0.030, 0.030, 0.004, 12, GLASS, rot_euler(0, 0, 90))
+    m.pop()
+
+    # In the cupboard under the bench: a tin of nails and a paintbrush. Behind the
+    # doors, so only the ajar one shows anything.
+    cup_z = D["BenchStartZ"] + 0.36
+    cup_y = 0.26 + BOARD
+    m.push((1.70, cup_y, cup_z + 0.20))
+    m.box((0.0, 0.026, 0.0), (0.110, 0.052, 0.078), GREEN)
+    m.box((0.004, 0.055, 0.002), (0.112, 0.010, 0.080), ZINC, rot_euler(0, 3, 0))
+    m.pop()
+    m.push((1.62, cup_y, cup_z - 0.20))
+    m.box((-0.062, 0.008, 0.0), (0.110, 0.016, 0.026), jitter(PINE))
+    m.box((0.005, 0.009, 0.0), (0.036, 0.018, 0.048), ZINC)
+    m.box((0.048, 0.009, 0.0), (0.055, 0.016, 0.048), (0.30, 0.26, 0.20))
+    m.pop()
 
     # Timber offcut, just inside the door.
     m.box((-0.30, 0.0225, -2.05), (0.400, 0.045, 0.090), PINE, rot_euler(0, 22, 0))
