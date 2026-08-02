@@ -317,6 +317,24 @@ improvements either way:
   eaves blocking a sheet of constant height to meet - so the crescents of
   daylight LIGHTING.md describes did not exist as geometry at all.
 
+## Making one thing look like two things
+
+A shed's furniture is all the same timber, so what separates a drawer from the
+bench it is in cannot be colour - it has to be a shadow. Three changes, all of
+them things a real bench has anyway:
+
+- **A face frame on the drawer bank and the cupboard.** Two 45 mm stiles and
+  three 40 mm rails standing 20 mm proud of the carcass, with the fronts set
+  into the openings behind a 3 mm reveal on all four sides. Before this the
+  fronts were two boards hung on the front of a void, meeting the carcass edge
+  to edge in the same material, and there was nothing to say where the bench
+  stopped and the drawer started.
+- **A harder chamfer on the moving fronts than on the frame around them** -
+  5 mm against 3.5. The arris is what catches light along the edge of a part.
+- **An 8 mm gap between the bench top and the wall lining.** They were coplanar,
+  which means no edge at all: from most of the room the top ran into the wall as
+  one continuous surface. Nobody scribes a shed bench to a stud wall either.
+
 All of these are mirrored in `Tools/preview_render.py`, since the previews are
 the only place anyone can currently check whether they work. The two things
 inside the drawer are the exception: nothing renders the inside of a closed

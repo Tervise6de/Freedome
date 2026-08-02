@@ -44,7 +44,14 @@ namespace Freedome.EditorTools.Generation
             float topCentreY = h - (tt * 0.5f);
 
             // --- top: two laminated plies with a hardwood front lipping -------
-            mb.AddBox(new Vector3(0f, topCentreY, 0f), new Vector3(d, tt, l), 1, 0.004f);
+            //
+            // Held 8 mm off the wall lining rather than butted to it. Nobody scribes
+            // a shed bench to a stud wall, and coplanar surfaces have no edge: the
+            // top ran into the lining with no shadow line, so from most of the room
+            // the bench and the wall were one continuous surface.
+            const float WallScribe = 0.008f;
+            mb.AddBox(new Vector3(-WallScribe * 0.5f, topCentreY, 0f),
+                      new Vector3(d - WallScribe, tt, l), 1, 0.004f);
             mb.AddBox(new Vector3(-halfD - 0.012f, h - 0.030f, 0f),
                       new Vector3(0.024f, 0.060f, l), 0, 0.004f);
 
@@ -111,7 +118,30 @@ namespace Freedome.EditorTools.Generation
 
         private static float DrawerCarcassDepth => Dim.BenchDepth - 0.09f;
 
-        public static float DrawerFrontHeight => (DrawerCarcassHeight - 0.014f) * 0.5f;
+        /// <summary>Face frame on the front of the carcass: what the fronts sit in.</summary>
+        public const float FaceFrameThickness = 0.020f;
+
+        public const float FaceFrameStile = 0.045f;   // vertical, at each end
+        public const float FaceFrameRail = 0.040f;    // horizontal, three of them
+
+        /// <summary>
+        /// The shadow gap around a drawer front. Small, but it is the whole reason
+        /// the front reads as a separate part rather than as more bench.
+        /// </summary>
+        public const float DrawerReveal = 0.003f;
+
+        public const float DrawerFrontThickness = 0.018f;
+
+        /// <summary>Clear height of one opening in the face frame.</summary>
+        public static float DrawerOpeningHeight =>
+            (DrawerCarcassHeight - (FaceFrameRail * 3f)) * 0.5f;
+
+        public static float DrawerFrontHeight => DrawerOpeningHeight - (DrawerReveal * 2f);
+
+        /// <summary>Clear width of an opening, and so of a front plus its reveals.</summary>
+        public static float DrawerOpeningWidth => DrawerBankWidth - (FaceFrameStile * 2f);
+
+        public static float DrawerFrontWidth => DrawerOpeningWidth - (DrawerReveal * 2f);
 
         /// <summary>Clear height inside the box, front to back.</summary>
         public static float DrawerBoxHeight => DrawerFrontHeight - 0.020f;
@@ -121,7 +151,11 @@ namespace Freedome.EditorTools.Generation
         /// <summary>Centre of the box, along the drawer's own +X (into the carcass).</summary>
         public static float DrawerBoxMidX => (DrawerBoxDepth * 0.5f) + 0.012f;
 
-        public static float DrawerInnerWidth => DrawerBankWidth - 0.030f;
+        /// <summary>
+        /// Clear width inside the drawer box. Set from the frame opening, not the
+        /// bank: a box wider than the hole it comes out of does not come out.
+        /// </summary>
+        public static float DrawerInnerWidth => DrawerOpeningWidth - 0.012f;
 
         /// <summary>Thickness of the board a drawer's contents actually sit on.</summary>
         public static float DrawerBottomThickness => Dim.BoardThickness * 0.6f;
@@ -151,19 +185,49 @@ namespace Freedome.EditorTools.Generation
                           new Vector3(d, height, Dim.BoardThickness), 0, 0.002f);
             }
 
+            // Face frame: two stiles and three rails across the front of the bank,
+            // with the drawer fronts set back inside the openings.
+            //
+            // Without it the fronts were two boards hung on the front of a void, in
+            // the same timber as the bench, meeting the carcass edge to edge - so
+            // there was nothing to say where the bench stopped and the drawer
+            // started. What separates them is a shadow: 3 mm of reveal on all four
+            // sides of every front, against a frame standing 20 mm proud.
+            float frameFrontX = -(d * 0.5f) - (FaceFrameThickness * 0.5f);
+
+            foreach (int sz in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(frameFrontX, carcassBottom + (height * 0.5f),
+                                      sz * ((BankWidth * 0.5f) - (FaceFrameStile * 0.5f))),
+                          new Vector3(FaceFrameThickness, height, FaceFrameStile), 0, 0.0035f);
+            }
+
+            float opening = DrawerOpeningHeight;
+            for (int r = 0; r < 3; r++)
+            {
+                float ry = carcassBottom + (FaceFrameRail * 0.5f) +
+                           (r * (FaceFrameRail + opening));
+                mb.AddBox(new Vector3(frameFrontX, ry, 0f),
+                          new Vector3(FaceFrameThickness, FaceFrameRail,
+                                      BankWidth - (FaceFrameStile * 2f)), 0, 0.0035f);
+            }
+
             mb.Pop();
 
             for (int i = 0; i < 2; i++)
             {
-                float fh = (height - 0.014f) * 0.5f;
-                float fy = carcassBottom + (fh * 0.5f) + (i * (fh + 0.010f)) + 0.002f;
+                float fy = carcassBottom + FaceFrameRail + (opening * 0.5f) +
+                           (i * (opening + FaceFrameRail));
 
                 // The front's centre, in world space: bench origin, plus the bank's
                 // offset inside the bench, plus the front's offset inside the bank.
+                // Set back from the frame face by the reveal, so the frame casts onto
+                // it rather than sitting flush with it.
                 Vector3 frontCentre = benchOrigin + centre +
-                                      new Vector3(-(d * 0.5f) - 0.009f, fy, 0f);
+                                      new Vector3(-(d * 0.5f) - FaceFrameThickness + DrawerReveal +
+                                                  (DrawerFrontThickness * 0.5f), fy, 0f);
 
-                BuildDrawer(ctx, parent, i, frontCentre, d, fh, BankWidth);
+                BuildDrawer(ctx, parent, i, frontCentre, d, DrawerFrontHeight, BankWidth);
             }
         }
 
@@ -174,13 +238,17 @@ namespace Freedome.EditorTools.Generation
             // 0 pine, 1 hardware
             MeshBuilder mb = new MeshBuilder($"Drawer_{index}", 2);
 
-            float innerW = bankWidth - 0.030f;
+            float innerW = DrawerInnerWidth;
             float boxDepth = carcassDepth - 0.030f;
-            float boxHeight = frontHeight - 0.020f;
+            float boxHeight = DrawerBoxHeight;
 
             // Front, standing at local x = 0 so the pivot is the face the player sees.
-            mb.AddBox(Vector3.zero, new Vector3(0.018f, frontHeight - 0.006f, bankWidth - 0.012f),
-                      0, 0.003f);
+            // Sized to the frame opening less its reveal, and chamfered harder than
+            // the carcass around it: an arris that catches light is the other half of
+            // what makes a front read as a separate piece of timber.
+            mb.AddBox(Vector3.zero,
+                      new Vector3(DrawerFrontThickness, frontHeight, DrawerFrontWidth),
+                      0, 0.005f);
 
             // Turned timber knob.
             mb.AddCylinder(new Vector3(-0.021f, 0f, 0f), 0.016f, 0.020f, 0.030f, 12, 0,
@@ -224,7 +292,7 @@ namespace Freedome.EditorTools.Generation
                 BuildContext.MarkMovable(edge);
 
                 BoxCollider reach = edge.AddComponent<BoxCollider>();
-                reach.size = new Vector3(0.05f, frontHeight, bankWidth - 0.012f);
+                reach.size = new Vector3(0.05f, frontHeight, DrawerFrontWidth);
 
                 ToolGatedFixture fixture = edge.AddComponent<ToolGatedFixture>();
                 fixture.Configure("offcut",
@@ -405,19 +473,41 @@ namespace Freedome.EditorTools.Generation
                           new Vector3(d, height, Dim.BoardThickness), 0, 0.002f);
             }
 
+            // The same face frame as the drawer bank, for the same reason: doors that
+            // meet the carcass edge to edge in the same timber read as one lump of
+            // bench with lines drawn on it.
+            float frameX = -(d * 0.5f) - (FaceFrameThickness * 0.5f);
+            float openingH = height - (FaceFrameRail * 2f);
+
+            foreach (int sz in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(frameX, bottom + (height * 0.5f),
+                                      sz * ((Width * 0.5f) - (FaceFrameStile * 0.5f))),
+                          new Vector3(FaceFrameThickness, height, FaceFrameStile), 0, 0.0035f);
+            }
+
+            foreach (int sy in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(frameX, bottom + (height * 0.5f) +
+                                              (sy * ((height - FaceFrameRail) * 0.5f)), 0f),
+                          new Vector3(FaceFrameThickness, FaceFrameRail,
+                                      Width - (FaceFrameStile * 2f)), 0, 0.0035f);
+            }
+
             // Two doors, one left slightly ajar because nobody ever closes both.
+            float hangX = -(d * 0.5f) - FaceFrameThickness + DrawerReveal + 0.009f;
             for (int i = 0; i < 2; i++)
             {
                 int sz = i == 0 ? -1 : 1;
-                float doorWidth = (Width * 0.5f) - 0.008f;
+                float leaf = ((Width - (FaceFrameStile * 2f)) * 0.5f) - (DrawerReveal * 1.5f);
                 float ajar = i == 1 ? 6f : 0f;
 
-                mb.Push(new Vector3(-(d * 0.5f) - 0.009f, bottom + (height * 0.5f),
-                                    sz * (Width * 0.5f - 0.004f)),
+                mb.Push(new Vector3(hangX, bottom + (height * 0.5f),
+                                    sz * ((Width * 0.5f) - FaceFrameStile - DrawerReveal)),
                         Quaternion.Euler(0f, sz * ajar, 0f));
-                mb.AddBox(new Vector3(0f, 0f, -sz * doorWidth * 0.5f),
-                          new Vector3(0.018f, height - 0.012f, doorWidth), 0, 0.003f);
-                mb.AddCylinder(new Vector3(-0.020f, 0f, -sz * (doorWidth - 0.045f)),
+                mb.AddBox(new Vector3(0f, 0f, -sz * leaf * 0.5f),
+                          new Vector3(0.018f, openingH - (DrawerReveal * 2f), leaf), 0, 0.005f);
+                mb.AddCylinder(new Vector3(-0.020f, 0f, -sz * (leaf - 0.045f)),
                                0.014f, 0.017f, 0.026f, 12, 0, Quaternion.Euler(0f, 0f, 90f));
                 mb.Pop();
             }

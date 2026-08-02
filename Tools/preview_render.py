@@ -571,7 +571,9 @@ def build_bench(m):
     d, l, h = D["BenchDepth"], D["BenchLength"], D["BenchHeight"]
     tt, leg = D["BenchTopThickness"], D["BenchLegSize"]
     m.push((D["BenchFrontX"] + d / 2, 0.0, D["BenchStartZ"] + l / 2))
-    m.box((0.0, h - tt / 2, 0.0), (d, tt, l), PLY)
+    # Held 8 mm off the wall lining, mirroring FixturesBuilder: butted, the top
+    # and the wall were one continuous surface with no shadow line between them.
+    m.box((-0.004, h - tt / 2, 0.0), (d - 0.008, tt, l), PLY)
     m.box((-d / 2 - 0.012, h - 0.03, 0.0), (0.024, 0.06, l), jitter(PINE))
     leg_top = h - tt
     for sx in (-1, 1):
@@ -584,28 +586,49 @@ def build_bench(m):
         m.box((0.0, leg_top - 0.055, sz * (l / 2 - 0.058)), (d - 0.14, 0.09, 0.035), PINE)
     m.box((0.0, 0.2, 0.0), (d - 0.1, BOARD, l - 0.2), jitter(PINE))
 
-    # drawer bank
+    # Drawer bank, with the face frame the fronts sit in. Mirrors FixturesBuilder:
+    # stile 45, rail 40, frame 20 proud of the carcass, 3 mm reveal round each
+    # front. Without the frame the fronts were two boards on the front of a void,
+    # in the same timber as the bench, with nothing to separate them from it.
     m.push((0.0, 0.0, l / 2 - 0.34))
     ct, cb = leg_top - 0.10, 0.26
+    bank_h = ct - cb
+    stile, rail, frame_t, reveal = 0.045, 0.040, 0.020, 0.003
+    opening = (bank_h - rail * 3) / 2
+    carc_d = d - 0.09
+    frame_x = -carc_d / 2 - frame_t / 2
     for sz in (-1, 1):
-        m.box((0.0, cb + (ct - cb) / 2, sz * 0.31), (d - 0.09, ct - cb, BOARD), PINE)
+        m.box((0.0, cb + bank_h / 2, sz * 0.31), (carc_d, bank_h, BOARD), PINE)
+        m.box((frame_x, cb + bank_h / 2, sz * (0.31 - stile / 2)),
+              (frame_t, bank_h, stile), jitter(PINE, 0.06))
+    for r in range(3):
+        m.box((frame_x, cb + rail / 2 + r * (rail + opening), 0.0),
+              (frame_t, rail, 0.62 - stile * 2), jitter(PINE, 0.06))
     for i in range(2):
-        fh = (ct - cb - 0.014) / 2
-        fy = cb + fh / 2 + i * (fh + 0.01) + 0.002
-        m.box((-(d - 0.09) / 2 - 0.009, fy, 0.0), (0.018, fh - 0.006, 0.608), jitter(PINE))
-        m.cyl((-(d - 0.09) / 2 - 0.03, fy, 0.0), 0.016, 0.02, 0.03, 10, PINE, rot_euler(0, 0, 90))
+        fy = cb + rail + opening / 2 + i * (opening + rail)
+        fx = -carc_d / 2 - frame_t + reveal + 0.009
+        m.box((fx, fy, 0.0), (0.018, opening - reveal * 2, 0.62 - stile * 2 - reveal * 2),
+              jitter(PINE))
+        m.cyl((fx - 0.021, fy, 0.0), 0.016, 0.02, 0.03, 10, PINE, rot_euler(0, 0, 90))
     m.pop()
 
-    # cupboard
+    # Cupboard, same face frame for the same reason.
     m.push((0.0, 0.0, -l / 2 + 0.36))
+    cw = 0.66
+    open_h = bank_h - rail * 2
     for sz in (-1, 1):
-        m.box((0.0, cb + (ct - cb) / 2, sz * 0.33), (d - 0.09, ct - cb, BOARD), PINE)
+        m.box((0.0, cb + bank_h / 2, sz * 0.33), (carc_d, bank_h, BOARD), PINE)
+        m.box((frame_x, cb + bank_h / 2, sz * (cw / 2 - stile / 2)),
+              (frame_t, bank_h, stile), jitter(PINE, 0.06))
+    for sy in (-1, 1):
+        m.box((frame_x, cb + bank_h / 2 + sy * (bank_h - rail) / 2, 0.0),
+              (frame_t, rail, cw - stile * 2), jitter(PINE, 0.06))
     for i, sz in enumerate((-1, 1)):
-        dw = 0.33 - 0.008
+        dw = (cw - stile * 2) / 2 - reveal * 1.5
         ajar = 6.0 if i == 1 else 0.0
-        m.push((-(d - 0.09) / 2 - 0.009, cb + (ct - cb) / 2, sz * (0.33 - 0.004)),
-               rot_euler(0, sz * ajar, 0))
-        m.box((0.0, 0.0, -sz * dw / 2), (0.018, ct - cb - 0.012, dw), jitter(PINE))
+        m.push((-carc_d / 2 - frame_t + reveal + 0.009, cb + bank_h / 2,
+                sz * (cw / 2 - stile - reveal)), rot_euler(0, sz * ajar, 0))
+        m.box((0.0, 0.0, -sz * dw / 2), (0.018, open_h - reveal * 2, dw), jitter(PINE))
         m.cyl((-0.02, 0.0, -sz * (dw - 0.045)), 0.014, 0.017, 0.026, 10, PINE, rot_euler(0, 0, 90))
         m.pop()
     m.pop()
@@ -1131,11 +1154,20 @@ def sun_visible(p: np.ndarray) -> np.ndarray:
     return lit
 
 
-def aperture_fill(p, n, centre, strength, size):
+def aperture_fill(p, n, centre, strength, size, wrap=0.0):
+    """Light arriving from an opening, treated as a soft area source.
+
+    `wrap` is a crude single-bounce term: the fraction of the aperture's light a
+    surface receives regardless of which way it faces. Without it a surface
+    turned away from the window gets nothing at all, which is wrong indoors -
+    most of the light on the wall the window is *in* has come off the floor and
+    the far wall, not through the glass. At wrap = 0 this is the old behaviour.
+    """
     d = centre - p
     dist = np.linalg.norm(d, axis=1)
     dhat = d / np.maximum(dist, 1e-6)[:, None]
     facing = np.clip(np.einsum('ij,ij->i', n, dhat), 0.0, 1.0)
+    facing = (facing * (1.0 - wrap)) + wrap
     return strength * facing * size / (size + dist ** 2)
 
 
@@ -1168,8 +1200,13 @@ def shade(centroids, normals, albedo):
     ambient_strength = np.where(inside, 0.16, 1.15)[:, None]
     out += albedo * hemi * ambient_strength
 
-    win = aperture_fill(centroids, normals, WIN_CENTRE, 1.55, 1.1)
-    vent = aperture_fill(centroids, normals, VENT_CENTRE, 0.35, 0.5)
+    # 0.34 of the aperture term arrives regardless of facing. Before this the
+    # only interior ambient was 0.16 of a hemisphere, so a wall turned away from
+    # the window fell to about 4% grey while one facing it read near white - two
+    # bays of the same lining, three metres apart, on either side of a stud.
+    # That contrast is a property of this renderer, not of the room.
+    win = aperture_fill(centroids, normals, WIN_CENTRE, 1.55, 1.1, wrap=0.34)
+    vent = aperture_fill(centroids, normals, VENT_CENTRE, 0.35, 0.5, wrap=0.34)
     fill_col = np.array([0.62, 0.68, 0.80])
     out += albedo * ((win + vent) * inside)[:, None] * fill_col
 

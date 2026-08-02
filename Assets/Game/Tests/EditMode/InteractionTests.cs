@@ -20,6 +20,39 @@ namespace Freedome.Tests.EditMode
         private const float WallClearance = 0.12f;
 
         /// <summary>
+        /// Light probe interpolation is only defined inside the hull of the probes.
+        /// Outside it, an object clamps to whatever the nearest outer tetrahedron
+        /// holds and stays there - so the hull has to contain the whole space the
+        /// player and the loose objects can occupy, not just the middle of it.
+        ///
+        /// The lattice used to run to x = +/-1.6 against walls at 2.0 and start at
+        /// y = 0.25 over a floor at 0. Three of the five loose objects start outside
+        /// it, and so does anything standing within 400 mm of a wall.
+        /// </summary>
+        [Test]
+        public void TheProbeHullReachesTheWallsAndTheFloor()
+        {
+            Bounds hull = LightingBuilder.ProbeHull();
+
+            Assert.LessOrEqual(hull.min.y, 0.10f,
+                $"the lowest probe is at y = {hull.min.y:0.00}, so anything on the floor " +
+                "is below the hull");
+
+            Assert.GreaterOrEqual(hull.max.x, ShedDimensions.HalfWidth - 0.10f,
+                "the lattice stops short of the long walls");
+            Assert.GreaterOrEqual(hull.max.z, ShedDimensions.HalfLength - 0.10f,
+                "the lattice stops short of the end walls");
+
+            foreach (CarryablesBuilder.Placement p in CarryablesBuilder.Placements)
+            {
+                Assert.IsTrue(hull.Contains(new Vector3(p.Base.x, Mathf.Max(p.Base.y, hull.min.y),
+                                                        p.Base.z)),
+                    $"{p.Name} starts outside the probe hull, so it is lit by whatever " +
+                    "tetrahedron it happens to clamp to");
+            }
+        }
+
+        /// <summary>
         /// What is in a drawer has to be in the drawer: on the bottom board rather
         /// than through it, and inside the sides rather than sticking out of them.
         ///

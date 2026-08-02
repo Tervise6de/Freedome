@@ -422,12 +422,24 @@ namespace Freedome.EditorTools.Generation
 
             var positions = new System.Collections.Generic.List<Vector3>();
 
-            float[] heights = { 0.25f, 1.10f, 2.00f, 2.70f };
-            for (float x = -1.6f; x <= 1.61f; x += 1.6f)
+            // The lattice has to reach the walls and the floor, not stop short of
+            // them. Probe interpolation is only defined inside the convex hull of
+            // the probes; outside it an object clamps to the nearest outer
+            // tetrahedron and keeps whatever ambient that happens to hold. The
+            // previous lattice ran x = -1.6 to 1.6 against walls at 2.0, and started
+            // at y = 0.25 over a floor at 0 - so *everything resting on the floor*
+            // and everything within 400 mm of a wall was outside the hull, which is
+            // where three of the five loose objects start and where the player
+            // spends most of their time. That reads as lighting going wrong near
+            // walls, and as a pop when a carried object crosses the boundary.
+            float xEdge = Dim.HalfWidth - ProbeInset;
+            float zEdge = Dim.HalfLength - ProbeInset;
+
+            foreach (float x in Spread(-xEdge, xEdge, 5))
             {
-                for (float z = -2.6f; z <= 2.61f; z += 1.3f)
+                foreach (float z in Spread(-zEdge, zEdge, 7))
                 {
-                    foreach (float y in heights)
+                    foreach (float y in ProbeHeights)
                     {
                         // Skip probes that would sit inside the roof slope.
                         if (y > Dim.RoofUndersideAt(x) - 0.1f)
@@ -456,7 +468,7 @@ namespace Freedome.EditorTools.Generation
             {
                 for (float x = Dim.DoorCentreX - 1.4f; x <= Dim.DoorCentreX + 1.41f; x += 1.4f)
                 {
-                    foreach (float y in new[] { 0.25f, 1.10f, 2.00f })
+                    foreach (float y in new[] { 0.05f, 1.10f, 2.00f })
                     {
                         positions.Add(new Vector3(x, y, z));
                     }
@@ -465,6 +477,42 @@ namespace Freedome.EditorTools.Generation
 
             group.probePositions = positions.ToArray();
             BuildContext.MarkStatic(go);
+        }
+
+        /// <summary>Count evenly spaced values from a to b, both ends included.</summary>
+        private static float[] Spread(float a, float b, int count)
+        {
+            float[] values = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                values[i] = Mathf.Lerp(a, b, i / (float)(count - 1));
+            }
+
+            return values;
+        }
+
+        /// <summary>How far inside the wall lining the outermost probes sit.</summary>
+        public const float ProbeInset = 0.06f;
+
+        /// <summary>
+        /// Probe heights. The lowest has to be below anything that can rest on the
+        /// floor, or every object on the floor is outside the hull.
+        /// </summary>
+        public static readonly float[] ProbeHeights = { 0.05f, 0.55f, 1.10f, 1.80f, 2.55f };
+
+        /// <summary>
+        /// The box the interior lattice spans, read off the same numbers the lattice
+        /// is built from. What the tests check the room against.
+        /// </summary>
+        public static Bounds ProbeHull()
+        {
+            float lo = ProbeHeights[0];
+            float hi = ProbeHeights[ProbeHeights.Length - 1];
+
+            Bounds b = new Bounds(new Vector3(0f, (lo + hi) * 0.5f, 0f), Vector3.zero);
+            b.Encapsulate(new Vector3(Dim.HalfWidth - ProbeInset, hi, Dim.HalfLength - ProbeInset));
+            b.Encapsulate(new Vector3(-(Dim.HalfWidth - ProbeInset), lo, -(Dim.HalfLength - ProbeInset)));
+            return b;
         }
     }
 }

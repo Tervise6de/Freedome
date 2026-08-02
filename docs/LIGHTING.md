@@ -177,9 +177,21 @@ tools, the plane - and a room-wide probe reflects the room average onto them.
 
 ### Light probes
 
-A lattice at 1.6 m in X and 1.3 m in Z, at four heights (0.25, 1.10, 2.00,
-2.70 m), skipping any position that would fall inside the roof slope. Denser
-sampling at the window and the door, where the indirect gradient actually is.
+A 5 x 7 lattice spanning the full interior - out to 60 mm inside each wall
+lining - at five heights (0.05, 0.55, 1.10, 1.80, 2.55 m), skipping any position
+that would fall inside the roof slope. Denser sampling at the window and the
+door, where the indirect gradient actually is.
+
+**The lattice has to reach the walls and the floor.** Probe interpolation is
+only defined inside the convex hull of the probes; outside it an object clamps
+to whatever the nearest outer tetrahedron holds and stays there, which reads as
+lighting going wrong near walls and as a pop when a carried object crosses the
+boundary. The first version ran x = +/-1.6 against walls at 2.0 and started at
+y = 0.25 over a floor at 0 - so everything resting on the floor, and everything
+within 400 mm of a wall, was outside it. That is three of the five loose objects
+and most of where the player stands.
+`LightingBuilder.ProbeHull()` reports the box; `TheProbeHullReachesTheWallsAndTheFloor`
+checks the room and every carryable against it.
 
 ---
 
@@ -236,8 +248,8 @@ grid has to cover everywhere a movable object can go. Two additions:
 - **Outside the door.** The door opens, so a carried object can leave the
   building. Without probes out there it would keep sampling interior lighting
   while standing in daylight. Three rows now cover the entrance apron.
-- The interior grid already covered carry height, between its 1.10 m and 2.00 m
-  rows.
+- **The floor and the walls.** See above: the interior lattice now reaches
+  both, which it did not.
 
 ### Adaptive Probe Volumes were considered and not used
 
