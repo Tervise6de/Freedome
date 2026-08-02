@@ -35,10 +35,11 @@ Consequently:
   intent, not a measurement.
 - **No Windows build has been produced.** `Builds/Windows/ShedRoomDemo/` is
   empty.
-- **No test has run in Unity.** 44 of them run outside it; see the compile check
+- **No test has run in Unity.** 53 of them run outside it; see the compile check
   below.
 - **Nothing has been interacted with.** No door has opened, no object has been
-  picked up, and no dropped rigidbody has landed on anything.
+  picked up, no dropped rigidbody has landed on anything, and nobody has ever
+  escaped from the shed.
 
 What *was* verified, by four independent passes:
 
@@ -50,7 +51,7 @@ What *was* verified, by four independent passes:
   viewpoints. Confirmed that the framing, roof structure, openings and prop
   placement read correctly, and caught three more real defects in the C#.
 - **Compile check** (`./Tools/compile_check.sh`) - all 9,000 lines type-checked
-  with Roslyn against hand-written Unity stand-ins, plus 44 of the 48 EditMode
+  with Roslyn against hand-written Unity stand-ins, plus 53 of the 57 EditMode
   tests actually executed. Caught five defects, two of them hard compile
   failures. See [Tools/CompileCheck/README.md](../Tools/CompileCheck/README.md).
 - **HDRP API check** (`./Tools/verify_hdrp_api.sh`) - every HDRP symbol the
@@ -192,33 +193,57 @@ The arithmetic that *is* checked - hinge offsets, carryable placements, reach -
 is in `InteractionTests`, and it caught one real fault already: a jar of fixings
 placed 350 mm in front of the bench, at bench height, in mid-air.
 
-### 3. Assembly definition references
+### 3. The escape chain, which nobody has played
+
+**Risk: high, and unanswerable here.** The chain is four beats long and every
+one of them is checked arithmetically - the crawl space is deep enough, the
+skirt board is in the wall line and in line with the hatch, the tools exist.
+None of that is the real question.
+
+The real question is whether it is **discoverable**. A player who never thinks
+to look under the floor never finds the way out, and there is deliberately no
+hint system to rescue them. Specific worries:
+
+- **Is the panel readable as screwed down?** Its four countersunk screws are
+  3 mm cylinders. They have never been rendered at any size.
+- **Does anyone open the drawer?** The screwdriver is in it. Nothing says so.
+- **Is the skirt board visible from inside the crawl space?** The player is
+  prone in a 230 mm void looking at a board 1.6 m away, lit by whatever comes
+  through an open hatch. That may be too dark to see, and probe coverage down
+  there has not been checked.
+- **Can a character controller physically get down the hatch?** The capsule is
+  360 mm across; the panel opening is 700 x 900 mm. The arithmetic works. Unity
+  crouching through a floor hole is another matter.
+
+The last one is the most likely to simply not work.
+
+### 4. Assembly definition references
 
 **Risk: medium.** The asmdefs reference `Unity.RenderPipelines.HighDefinition.Runtime`,
 `.Editor`, `Unity.RenderPipelines.Core.Runtime`, `.Editor` and `UnityEngine.UI` by
 name. These names are stable, but a mismatch produces a wall of type-not-found
 errors that looks worse than it is. Check the asmdef inspector first.
 
-### 4. Package versions
+### 5. Package versions
 
 **Risk: medium.** `Packages/manifest.json` pins HDRP 17.0.4, ProBuilder 6.0.4,
 Test Framework 1.4.5. If the installed Unity 6 patch resolves different versions,
 let the package manager update them rather than forcing these.
 
-### 5. The eaves light leak
+### 6. The eaves light leak
 
 **Risk: medium, visual.** The row of crescents along the top of both long walls
 (see LIGHTING.md) is geometrically correct but has never been seen. It could read
 as a lovely row of highlights or as an obvious seam. Tunable via
 `RoofBuilder.TroughY()`. Look at this early.
 
-### 6. Unbaked lighting
+### 7. Unbaked lighting
 
 **Risk: certain until fixed.** The scene ships unbaked. Until lighting is baked,
 the interior has direct light and sky ambient only and will look flat and dark in
 the corners. Do not judge the art direction before baking.
 
-### 7. The utility wall is the darkest surface in the room
+### 8. The utility wall is the darkest surface in the room
 
 **Risk: medium, visual.** The preview render of the electrical area
 (`docs/previews/05_electrical_utility_area.png`) shows the far gable end
@@ -230,20 +255,20 @@ first after baking. If it is still too dark, the honest fixes in order are:
 widen the vent's contribution, raise the ceiling lamp's output, or move the
 lamp toward the utility end - not a fill light with no fixture.
 
-### 8. Geometry intersections at the eaves
+### 9. Geometry intersections at the eaves
 
 **Risk: medium, visual.** The tapered eaves blocking is generated per rafter bay
 and butts against rafters whose position is computed independently. Small
 overlaps or gaps at those junctions are plausible. Screenshot 6 (ceiling and roof
 structure) is the one that would show it.
 
-### 9. Prop contact with the floor
+### 10. Prop contact with the floor
 
 **Risk: low.** Props are placed by computed base points, not dropped onto
 collision. Anything whose local origin is not exactly at its base will float or
 sink by a few millimetres. Screenshot 7 exists specifically to catch this.
 
-### 10. `ProjectVersion.txt`
+### 11. `ProjectVersion.txt`
 
 **Resolved.** `6000.0.58f1` was originally a guess. It has since been checked
 against the list of released editor builds (via the GameCI image tags, which are
@@ -251,19 +276,19 @@ published per real Unity release) and it is a genuine 6000.0 patch - one of 79.
 The invented revision hash that sat beside it has been removed, since a wrong
 one can stop Unity Hub locating the install.
 
-### 11. Legacy input assumption
+### 12. Legacy input assumption
 
 **Risk: low.** The controller uses the legacy `Input` class. The new Input System
 package is deliberately absent from the manifest so the old input handling stays
 active. If anyone adds `com.unity.inputsystem`, set Active Input Handling to
 "Both" or the controller stops responding.
 
-### 12. Pause menu at non-16:9 aspect ratios
+### 13. Pause menu at non-16:9 aspect ratios
 
 **Risk: low.** The canvas scales with a 1920 x 1080 reference at match 0.5.
 Untested at ultrawide or 4:3.
 
-### 13. Screenshot capture without a bake
+### 14. Screenshot capture without a bake
 
 **Risk: low.** `ScreenshotCapture` renders through a temporary camera. If it is
 run before lighting is baked the shots will show the unbaked room, which is not

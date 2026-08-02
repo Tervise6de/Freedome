@@ -152,6 +152,21 @@ namespace Freedome.Interaction
                 {
                     return "Your hands are full";
                 }
+
+                // A tool-gated fixture describes itself differently depending on
+                // what is in your hand, and only offers the key when you can act.
+                if (_focus is ToolGatedFixture fixture)
+                {
+                    string text = fixture.PromptFor(_carried);
+                    return text == fixture.Prompt ? text : $"[{useKey}] {text}";
+                }
+
+                // A locked thing states its condition; there is nothing to press.
+                if (_focus is HingedPart hinged && hinged.IsBlocked)
+                {
+                    return hinged.Prompt;
+                }
+
                 return $"[{useKey}] {_focus.Prompt}";
             }
 

@@ -21,6 +21,17 @@ namespace Freedome.Interaction
         [SerializeField] private bool startOpen;
 
         /// <summary>
+        /// Gates. The door's lock never opens - it is the dead end that sends the
+        /// player looking elsewhere - and the floor panel will not lift until its
+        /// four screws are out.
+        /// </summary>
+        [SerializeField] private bool lockedForever;
+        [SerializeField] private bool needsPanelUnscrewed;
+        [SerializeField] private string lockedPrompt = "It is locked";
+
+        private EscapeState _escape;
+
+        /// <summary>
         /// Disabled while the part is open, so the player can walk through a door
         /// that is standing open. Left null for parts nothing passes through.
         /// </summary>
@@ -40,13 +51,35 @@ namespace Freedome.Interaction
             get { return _angle; }
         }
 
+        public bool IsBlocked
+        {
+            get
+            {
+                if (lockedForever)
+                {
+                    return true;
+                }
+
+                return needsPanelUnscrewed && (_escape == null || !_escape.PanelUnscrewed);
+            }
+        }
+
         public override string Prompt
         {
-            get { return IsOpen ? openVerb : closedVerb; }
+            get
+            {
+                if (IsBlocked)
+                {
+                    return lockedPrompt;
+                }
+
+                return IsOpen ? openVerb : closedVerb;
+            }
         }
 
         private void Awake()
         {
+            _escape = EscapeState.Find();
             _target = startOpen ? openAngle : 0f;
             _angle = _target;
             Apply();
@@ -54,6 +87,11 @@ namespace Freedome.Interaction
 
         public override void Interact(PlayerInteractor actor)
         {
+            if (IsBlocked)
+            {
+                return;
+            }
+
             _target = IsOpen ? 0f : openAngle;
         }
 
@@ -78,6 +116,14 @@ namespace Freedome.Interaction
                 // should not be able to walk into a door that is already swinging away.
                 blocker.enabled = _angle < 1f;
             }
+        }
+
+        /// <summary>Locks it shut for good, or until the panel screws are out.</summary>
+        public void Gate(bool locked, bool untilPanelUnscrewed, string prompt)
+        {
+            lockedForever = locked;
+            needsPanelUnscrewed = untilPanelUnscrewed;
+            lockedPrompt = prompt;
         }
 
         /// <summary>

@@ -21,7 +21,7 @@ no game in it yet, and by design there should not be.
 
 ## What this is
 
-A 6 m x 4 m timber shed you can walk around and look at. It is framed the way a
+A 6 m x 4 m timber shed you have to get out of. It is framed the way a
 real one is - piers, bearers, joists, floorboards, 90x45 studs at 600 mm
 centres, a pitched roof on purlins under corrugated steel - and dressed as a
 shed that somebody actually uses for gardening, repairs and storage.

@@ -82,6 +82,7 @@ namespace Freedome.EditorTools.Generation
                 EditorUtility.DisplayProgressBar("Shed room", "Prop dressing", 0.72f);
                 PropsBuilder.Build(ctx, dressing);
                 CarryablesBuilder.Build(ctx, dressing);
+                EscapeRouteBuilder.Build(ctx, dressing);
 
                 EditorUtility.DisplayProgressBar("Shed room", "Exterior", 0.80f);
                 ShellBuilder.BuildExterior(ctx, exterior);
@@ -91,8 +92,8 @@ namespace Freedome.EditorTools.Generation
 
                 EditorUtility.DisplayProgressBar("Shed room", "Player and systems", 0.93f);
                 WireLightSwitch(root.transform);
-                CreatePlayerRig(root.transform);
                 CreateSystems(root.transform);
+                CreatePlayerRig(root.transform);
                 CreateScaleReference(root.transform);
 
                 ConfigureSceneLightingSettings();
@@ -215,6 +216,10 @@ namespace Freedome.EditorTools.Generation
             GameObject systems = new GameObject("Systems");
             systems.transform.SetParent(parent, false);
 
+            // The escape state has to exist before anything that looks it up in
+            // Awake, which is why Systems is created before the player rig.
+            systems.AddComponent<EscapeState>();
+            systems.AddComponent<EscapeHud>();
             systems.AddComponent<PauseMenuController>();
             systems.AddComponent<GraphicsSettingsController>();
             systems.AddComponent<PlayAreaBoundary>();

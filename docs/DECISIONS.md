@@ -353,3 +353,46 @@ across the apex. `RidgeCapClosesTheApex` now asserts the inner edge crosses
 x = 0, with margin for the chamfer, and `RidgeCapStillCoversTheSheetEdge`
 stops the fix being made by sliding the cap up until it no longer laps the
 sheeting.
+
+
+---
+
+## It is an escape game
+
+**Decision.** One route out of the shed, in four beats: the door is locked, the
+floor panel is screwed down, the screwdriver is in the bench drawer, and the
+skirt board under the floor comes off with the timber offcut. Then you crawl out.
+
+**This is the third reversal**, and the largest. The line it overturns was
+written two commits ago and had survived the previous two: *an interactable does
+something physical to itself and nothing else - no flags, no unlocks, no
+counters, no objective.* `EscapeState` is exactly the flag that line forbade.
+
+Recording the sequence, because the direction matters more than any one step:
+
+1. Environment only. No interaction at all.
+2. Interaction, but nothing may set a flag.
+3. Inventory, but it is a container and nothing more.
+4. An escape, with the flags, the gating and the goal that implies.
+
+**What was chosen carefully.** Every object in the chain already existed. The
+four countersunk screws were modelled into the service panel during the
+environment milestone; the crawl space follows from the shed standing on piers;
+the offcut was one of the five carryables. The only new geometry is the skirt
+board, which a shed on piers has anyway. Nothing was added to be a puzzle piece,
+so nothing reads as one.
+
+The screwdriver replaced the tin of screws in the drawer. That is the one place
+the game reached back and changed something for its own sake, and it is a
+smaller change than it looks - a drawer with a screwdriver in it is not more
+contrived than a drawer with a tin of screws in it.
+
+**What was deliberately refused.** A second route, branching, optional content,
+a timer, a fail state, a score, and any form of hint. Also refused: prompts that
+name the tool you are missing. The panel says "Screwed down at four corners",
+never "You need a screwdriver" - the screws have been visible since long before
+anybody needed them, and a player who looks at them can work it out.
+
+**Unverified, like everything else.** Nobody has played this. In particular
+nobody knows whether the chain is discoverable without a hint, which is the only
+question that actually matters about it and the one arithmetic cannot answer.

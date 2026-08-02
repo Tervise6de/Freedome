@@ -194,11 +194,17 @@ namespace Freedome.EditorTools.Generation
 
             if (index == 0)
             {
-                MeshBuilder mb = new MeshBuilder("Carry_ScrewTin", 2);
-                PropLibrary.FixingsJar(mb, Vector3.zero, 0.070f, 0.048f, 0, 1);
-                Attach(ctx, mb, "Carry_ScrewTin", new[] { Keys.Hardware, Keys.DarkSteel },
+                // The screwdriver. It is in a drawer because that is where a
+                // screwdriver lives, not because it is hidden - the drawer opens
+                // whether or not anybody ever needs what is in it.
+                MeshBuilder mb = new MeshBuilder("Carry_Screwdriver", 2);
+                PropLibrary.Timber(mb, new Vector3(-0.055f, 0f, 0f),
+                                   new Vector3(0.110f, 0.026f, 0.026f), Quaternion.identity, 0);
+                mb.AddCylinder(new Vector3(0.055f, 0f, 0f), 0.005f, 0.004f, 0.110f, 8, 1,
+                               Quaternion.Euler(0f, 0f, 90f));
+                Attach(ctx, mb, "Carry_Screwdriver", new[] { Keys.PaintedRed, Keys.DarkSteel },
                        drawer, new Vector3(boxMidX - 0.05f, restY, -0.10f),
-                       "tin of screws", 0.5f, new Vector3(0.22f, -0.18f, 0.36f));
+                       "screwdriver", 0.2f, new Vector3(0.22f, -0.18f, 0.36f));
             }
             else
             {

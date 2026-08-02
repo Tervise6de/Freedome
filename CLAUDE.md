@@ -25,38 +25,52 @@ Do not describe any part of it as working, verified or tested until you have
 evidence that it ran. If asked how it performs or how it looks, the answer is
 that nobody knows yet.
 
-## Hard scope boundary
+## Scope
 
-Do **not** add, even if it seems obviously useful:
+This is now an escape game. It was an environment, then an environment you could
+handle, and it has been asked to become the thing the environment was always a
+set for. The boundary has moved three times; DECISIONS.md records each one so a
+reader can see the direction rather than find three documents disagreeing.
 
-countdown timer, game-over, object combination, kidnapper AI, escape-route
-logic, puzzles, evidence journal, narrative clues, dialogue, save system,
-combat, multiplayer, runtime generative AI, procedural puzzle generation.
+### What exists
 
-### What interaction is allowed to be
+One route out, four beats:
 
-Interaction was added deliberately, and the line it holds is narrow: **an
-interactable does something physical to itself and nothing else.**
+| Beat | Object | Why it is credible |
+| --- | --- | --- |
+| The door is locked | rim lock, no key | The bolt works. The lock does not. It is the dead end that starts the search |
+| Unscrew the floor panel | screwdriver, bench drawer | The panel has had four countersunk screws modelled in it since the environment milestone |
+| Lift the panel | the hinge already built | The shed stands on piers, so there is a real crawl space under it |
+| Lever off the skirt board | timber offcut | Nailed, not screwed - so the screwdriver is the wrong tool and a 400 mm length of 90x45 is the right one |
 
-Allowed: a door swings, a floor panel lifts, a switch switches a light, an
-object can be carried and put down.
+Then you crawl out. `EscapeState` holds three booleans and an event; that is the
+entire game state.
 
-Not allowed, and this is the whole of the boundary: an interactable that sets a
-flag, unlocks something, counts, scores, completes, reveals, or is *required*.
-The moment one object's state changes what another object does, this stops
-being an environment.
+### Still not in, and not to be added without asking
 
-Carry goes through a six-slot inventory: pick up, select a slot to hold it,
-drop it back into the room. The inventory is a **container and nothing more** -
-no item has an effect, none can be combined, none is required, nothing is
-counted or scored, and nothing persists past the session. Still no stacking and
-no throwing.
+countdown timer, game-over, kidnapper AI, dialogue, save system, combat,
+multiplayer, runtime generative AI, procedural puzzle generation, score, rating,
+chapter structure.
 
-The affordances in [docs/FUTURE_GAMEPLAY_HOOKS.md](docs/FUTURE_GAMEPLAY_HOOKS.md)
-may now move, but they still may not be **signposted**: no highlights, no
-outlines, no symbols, no markings, no audio stings, and no reticle that changes
-when something is usable. The prompt appearing when you are already looking at
-an object from arm's reach is the entire feedback budget.
+**No second route, no branching, no optional content.** One way out that makes
+sense is worth more here than three that need signposting to tell apart.
+
+### The rules that did not move
+
+These survived all three reversals and still hold:
+
+- **Nothing is signposted.** No highlights, no outlines, no symbols, no
+  markings, no audio stings, no reticle that changes when something is usable,
+  no quest log, no hint system. The prompt appearing when you are already
+  looking at something from arm's reach is the entire feedback budget.
+- **A prompt never names the tool you are missing.** It describes what you are
+  looking at. "Screwed down at four corners" is the game telling you what it
+  needs without telling you what to fetch.
+- **Every object was in the shed before it had a job.** The screws, the panel,
+  the piers, the offcut and the drawer all existed for the environment. Nothing
+  was added to be a puzzle piece, and the test in FUTURE_GAMEPLAY_HOOKS still
+  applies: if somebody built this shed with no intention of anyone escaping,
+  would this still be here, looking like this?
 
 ## Tone constraint
 

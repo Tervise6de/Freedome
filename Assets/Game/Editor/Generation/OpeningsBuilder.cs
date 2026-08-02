@@ -225,6 +225,9 @@ namespace Freedome.EditorTools.Generation
                 // exterior tee hinges actually opens. DoorSwingsOutwardThroughItsWholeArc
                 // is what keeps the sign honest.
                 HingedPart part = hinge.AddComponent<HingedPart>();
+                // Locked, and it stays locked. It is the first thing anybody tries
+                // and the reason they start looking at the rest of the building.
+                part.Gate(true, false, "The rim lock is fast - no key");
                 part.Configure("Open the door", "Close the door", Vector3.up,
                                DoorOpenAngleDegrees, 150f,
                                blockerGo != null ? blockerGo.GetComponent<Collider>() : null);

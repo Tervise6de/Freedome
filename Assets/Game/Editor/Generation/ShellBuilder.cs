@@ -298,6 +298,26 @@ namespace Freedome.EditorTools.Generation
                 HingedPart part = hinge.AddComponent<HingedPart>();
                 part.Configure("Lift the floor panel", "Lower the floor panel",
                                Vector3.right, -78f, 110f, null);
+                part.Gate(false, true, "Screwed down at four corners");
+
+                // The screws. They were modelled into the panel long before anything
+                // used them, which is why the panel reads as an ordinary piece of
+                // floor rather than as a lid somebody put there for the player.
+                GameObject screws = new GameObject("ServicePanel_Screws");
+                screws.transform.SetParent(panel.transform, false);
+                screws.transform.localPosition = Vector3.zero;
+                BuildContext.MarkMovable(screws);
+
+                BoxCollider reach = screws.AddComponent<BoxCollider>();
+                reach.size = new Vector3(Dim.ServicePanelWidth, 0.06f, Dim.ServicePanelLength);
+                reach.center = new Vector3(0f, 0.02f, 0f);
+
+                ToolGatedFixture fixture = screws.AddComponent<ToolGatedFixture>();
+                fixture.Configure("screwdriver",
+                                  "Screwed down at four corners",
+                                  "Unscrew the panel",
+                                  "The screws are out",
+                                  ToolGatedFixture.Effect.UnscrewPanel);
             }
         }
 

@@ -4,6 +4,13 @@ The shed reserves six locations that a later milestone could turn into escape
 routes. This document records where they are and how each one was made an
 ordinary part of the building.
 
+**Two of these are now implemented** - the door (as a locked dead end) and the
+floor panel (as the way out). See DECISIONS.md. The other four remain exactly as
+described below: no trigger, no script, no cue.
+
+The original claim, kept because the reasoning still governs the four that are
+left:
+
 **Nothing in this document is implemented.** None of these objects has a
 collider trigger, an interaction script, a highlight, an outline, a symbol, a
 marking or any other cue. Read from inside the room they are a door, a window, a
