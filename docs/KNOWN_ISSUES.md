@@ -195,6 +195,13 @@ placed 350 mm in front of the bench, at bench height, in mid-air.
 
 ### 3. The escape chain, which nobody has played
 
+**Deadlock is now checked.** `TheChainCannotDeadlock` walks
+`EscapeRouteBuilder.Chain` and requires every tool to be reachable strictly
+before the step needing it. That is the one class of escape-room bug that makes
+a room literally unfinishable, and it takes one careless move to create - the
+test fails if the offcut is put behind the drawer it opens.
+
+
 **Risk: high, and unanswerable here.** The chain is four beats long and every
 one of them is checked arithmetically - the crawl space is deep enough, the
 skirt board is in the wall line and in line with the hatch, the tools exist.
@@ -214,9 +221,11 @@ hint system to rescue them. Specific worries:
   space; a person needs 350 to 400 mm to crawl. That route was impossible in the
   world, not merely in Unity. The way out is now the door's rim lock - see
   DECISIONS.md. `NothingInTheRouteRequiresCrawlingUnderTheFloor` holds the line.
-- **Is the rim lock case readable as something screwed on?** It is a 130 x 38 mm
-  case with a lever and an escutcheon, at 1.020 m on the latch stile. It has
-  never been rendered.
+- **Is the rim lock case readable as something screwed on?** It now has four
+  countersunk fixing screws near its corners, in both the generator and the
+  preview reconstruction, because a case with no visible fixings gives the
+  player no reason to think it comes off. Still never rendered at any size, and
+  5.5 mm screw heads at arm's length is the whole question.
 - **Does the drawer read as stuck rather than as broken?** The prompt says
   "Swollen shut - it will not pull". If a player reads that as "this drawer is
   scenery" they never come back to it with the offcut.

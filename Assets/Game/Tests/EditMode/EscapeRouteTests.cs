@@ -88,17 +88,64 @@ namespace Freedome.Tests.EditMode
         }
 
         [Test]
+        public void TheChainCannotDeadlock()
+        {
+            // Every tool must be reachable strictly before the step that needs it.
+            // A tool freed by the step it is needed for - or by a later one - is an
+            // unwinnable room, and it takes one careless move to create.
+            EscapeRouteBuilder.Step[] chain = EscapeRouteBuilder.Chain;
+
+            for (int i = 0; i < chain.Length; i++)
+            {
+                if (string.IsNullOrEmpty(chain[i].Tool))
+                {
+                    continue;
+                }
+
+                Assert.Less(chain[i].ToolFreedByStep, i,
+                    $"step {i} ({chain[i].Name}) needs the {chain[i].Tool}, which is not " +
+                    $"reachable until step {chain[i].ToolFreedByStep}. The room cannot be finished.");
+            }
+        }
+
+        [Test]
+        public void TheFirstStepNeedsNothingYouCannotAlreadyReach()
+        {
+            EscapeRouteBuilder.Step first = EscapeRouteBuilder.Chain[0];
+
+            Assert.AreEqual(-1, first.ToolFreedByStep,
+                "the first step needs a tool that is locked away, so the game cannot start");
+        }
+
+        [Test]
+        public void TheChainEndsByLeavingTheShed()
+        {
+            EscapeRouteBuilder.Step[] chain = EscapeRouteBuilder.Chain;
+
+            Assert.Greater(chain.Length, 2, "a two-step escape is a door with a key");
+            Assert.IsTrue(chain[chain.Length - 1].Name.ToLowerInvariant().Contains("out"),
+                "the chain does not end by getting out");
+        }
+
+        [Test]
         public void TheRimLockIsOnTheInsideFaceWithinReach()
         {
             // A rim lock mounts on the inside of the door, which is the whole reason
-            // this route works. Its case sits at 1.020 m on the latch stile.
-            const float LockHeight = 1.020f;
+            // this route works. Read from the builder: an earlier version of this
+            // test kept its own copy of the height, which is exactly how a collider
+            // ends up somewhere the lock is not.
+            float LockHeight = OpeningsBuilder.RimLockLocalCentre.y;
 
             Assert.Less(LockHeight, ShedDimensions.PlayerEyeHeight + 0.5f,
                 "the lock case is above comfortable reach");
             Assert.Greater(LockHeight, 0.6f, "the lock case is below comfortable reach");
             Assert.Less(LockHeight, ShedDimensions.DoorLeafHeight,
                 "the lock case is above the top of the door");
+
+            // And the case has to sit proud of the leaf, on the room side, or the
+            // screws are not reachable and the whole route is fiction.
+            Assert.Greater(OpeningsBuilder.RimLockLocalCentre.z, 0f,
+                "the lock case is on the outside face of the door");
         }
     }
 }

@@ -274,3 +274,22 @@ nine.
 
 **The review has not been performed** - the scene has never been rendered. See
 [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+
+
+## Detail that exists so the game reads
+
+Two additions made for legibility rather than for looks, though they are both
+improvements either way:
+
+- **Fixing screws on the rim lock case.** Four countersunk heads near the
+  corners. The case has always been a separate box on the inside face of the
+  door; what was missing was any sign of how it is held there. It is now the
+  thing the whole way out turns on, and a player who cannot see fixings has no
+  reason to think it comes off.
+- **A deeper chamfer between the door's boards** - 4.5 mm rather than 2.5, with
+  a 3 mm gap rather than 1.5. A ledged-and-braced door is six separate boards
+  and the shadow line between them is most of what says so. Too fine a chamfer
+  and the leaf reads as one flat slab.
+
+Both are mirrored in `Tools/preview_render.py`, since the previews are the only
+place anyone can currently check whether they work.

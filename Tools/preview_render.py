@@ -455,7 +455,7 @@ def build_door(m):
     w, h = D["DoorLeafWidth"], D["DoorLeafHeight"]
     for i in range(6):
         cx = -w / 2 + w / 6 * (i + 0.5)
-        m.box((cx, h / 2 + 0.006, -0.0125), (w / 6 - 0.004, h, 0.025), jitter(PINE, 0.12))
+        m.box((cx, h / 2 + 0.006, -0.0125), (w / 6 - 0.007, h, 0.025), jitter(PINE, 0.12))
     for ly in (0.22, 1.03, 1.84):
         m.box((0.0, ly + 0.006, 0.01), (w - 0.02, 0.095, 0.02), jitter(PINE, 0.08))
         for i in range(6):
@@ -473,6 +473,14 @@ def build_door(m):
     m.box((lx, y, 0.039), (0.115, 0.145, 0.038), ZINC)
     m.cyl((lx, y, 0.062), 0.0165, 0.0165, 0.014, 14, ZINC, rot_euler(90, 0, 0))
     m.box((lx - 0.048, y, 0.072), (0.105, 0.02, 0.018), ZINC)
+    # Four countersunk fixing screws near the corners of the case. Mirrors
+    # OpeningsBuilder - a player who cannot see fixings has no reason to think
+    # the case comes off, and this view is the only place anyone can check.
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            m.cyl((lx + sx * 0.042, y + sy * 0.056, 0.058), 0.0055, 0.0042, 0.004, 10,
+                  STEEL, rot_euler(90, 0, 0))
+
     m.cyl((lx, y - 0.052, 0.060), 0.011, 0.011, 0.005, 12, STEEL, rot_euler(90, 0, 0))
     by = 1.726
     m.box((lx, by, 0.032), (0.13, 0.038, 0.014), ZINC)

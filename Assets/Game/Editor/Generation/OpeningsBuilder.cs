@@ -117,6 +117,18 @@ namespace Freedome.EditorTools.Generation
         /// </summary>
         public const float CasementOpenAngleDegrees = 72f;
 
+        /// <summary>
+        /// The rim lock case, in the door leaf's own local frame. Shared by the
+        /// geometry, the interaction collider and the tests, because three copies
+        /// of 1.020 is how the collider ends up somewhere the lock is not.
+        /// </summary>
+        public static Vector3 RimLockLocalCentre =>
+            new Vector3((Dim.DoorLeafWidth * 0.5f) - 0.075f,
+                        Dim.DoorHandleHeight + 0.006f,
+                        0.020f + 0.019f);
+
+        public static readonly Vector3 RimLockCaseSize = new Vector3(0.115f, 0.145f, 0.038f);
+
         /// <summary>Half the sash's width, and its hinge position in the window's
         /// own local frame. Exposed so the tests read the built values.</summary>
         public static float CasementPaneWidth =>
@@ -150,8 +162,11 @@ namespace Freedome.EditorTools.Generation
             for (int i = 0; i < BoardCount; i++)
             {
                 float cx = -halfW + (boardW * (i + 0.5f));
+                // 3 mm rather than the default hairline. A ledged-and-braced door is
+                // six separate boards, and the shadow line between them is most of
+                // what says so - too small a chamfer and it reads as one flat slab.
                 mb.AddBox(new Vector3(cx, (h * 0.5f) + BottomGap, -BoardThickness * 0.5f),
-                          new Vector3(boardW - 0.0015f, h, BoardThickness), 0, 0.0025f);
+                          new Vector3(boardW - 0.0030f, h, BoardThickness), 0, 0.0045f);
             }
 
             // Three ledges on the inside face.
@@ -252,12 +267,13 @@ namespace Freedome.EditorTools.Generation
         {
             GameObject go = new GameObject("Door_RimLockCase");
             go.transform.SetParent(leaf, false);
-            go.transform.localPosition = new Vector3(
-                (Dim.DoorLeafWidth * 0.5f) - 0.075f, 1.020f, 0.030f);
+            go.transform.localPosition = RimLockLocalCentre;
             BuildContext.MarkMovable(go);
 
+            // Grown past the case so it is comfortable to aim at, but still smaller
+            // than the stile it sits on.
             BoxCollider reach = go.AddComponent<BoxCollider>();
-            reach.size = new Vector3(0.16f, 0.20f, 0.07f);
+            reach.size = RimLockCaseSize + new Vector3(0.055f, 0.055f, 0.030f);
 
             ToolGatedFixture fixture = go.AddComponent<ToolGatedFixture>();
             fixture.Configure("screwdriver",
@@ -283,6 +299,21 @@ namespace Freedome.EditorTools.Generation
                            0.0165f, 0.0165f, 0.014f, 14, Metal, Quaternion.Euler(90f, 0f, 0f));
             mb.AddBox(new Vector3(latchX - 0.048f, y, ledgeThickness + 0.052f),
                       new Vector3(0.105f, 0.020f, 0.018f), Metal, 0.004f);
+
+            // Four countersunk fixing screws, one near each corner of the case.
+            // The case has always been a separate box on the inside face; what was
+            // missing was any sign of how it is held there. A player who cannot see
+            // fixings has no reason to think the case comes off.
+            foreach (int sx in new[] { -1, 1 })
+            {
+                foreach (int sy in new[] { -1, 1 })
+                {
+                    mb.AddCylinder(new Vector3(latchX + (sx * 0.042f), y + (sy * 0.056f),
+                                               ledgeThickness + 0.038f),
+                                   0.0055f, 0.0042f, 0.004f, 10, Metal,
+                                   Quaternion.Euler(90f, 0f, 0f));
+                }
+            }
 
             // Keyhole escutcheon below the lever.
             mb.AddCylinder(new Vector3(latchX, y - 0.052f, ledgeThickness + 0.040f),

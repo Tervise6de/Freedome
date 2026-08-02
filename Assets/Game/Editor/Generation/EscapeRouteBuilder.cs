@@ -20,6 +20,37 @@ namespace Freedome.EditorTools.Generation
     /// </summary>
     public static class EscapeRouteBuilder
     {
+        /// <summary>
+        /// One step of the way out: what it needs, and where that thing is.
+        ///
+        /// Written down as data rather than left implicit across three builders so
+        /// that a test can walk it. The failure this guards against is the classic
+        /// escape-room deadlock - the tool for a step being locked behind that same
+        /// step, or behind a later one. It is obvious when stated and very easy to
+        /// create by moving one object.
+        /// </summary>
+        public struct Step
+        {
+            public string Name;
+
+            /// <summary>What you must be holding. Empty for steps needing nothing.</summary>
+            public string Tool;
+
+            /// <summary>
+            /// Index of the step that makes <see cref="Tool"/> reachable, or -1 when
+            /// it is lying in the open from the start.
+            /// </summary>
+            public int ToolFreedByStep;
+        }
+
+        public static readonly Step[] Chain =
+        {
+            new Step { Name = "Lever the swollen drawer open", Tool = "offcut", ToolFreedByStep = -1 },
+            new Step { Name = "Take the screwdriver from the drawer", Tool = "", ToolFreedByStep = -1 },
+            new Step { Name = "Take the rim lock case off the door", Tool = "screwdriver", ToolFreedByStep = 1 },
+            new Step { Name = "Walk out", Tool = "", ToolFreedByStep = -1 },
+        };
+
         /// <summary>How far out from the entrance wall the exit trigger sits.</summary>
         public const float ExitStandoff = 0.90f;
 

@@ -10,7 +10,7 @@ namespace Freedome.Interaction
     /// now because the project is an escape game, and an escape needs a state that
     /// survives the object you are touching.
     ///
-    /// Kept deliberately small: three booleans and an event. No score, no timer, no
+    /// Kept deliberately small: four booleans and an event. No score, no timer, no
     /// fail state, no branching. If this class starts growing a progression system,
     /// that is a new decision, not an extension of this one.
     /// </summary>
@@ -31,7 +31,7 @@ namespace Freedome.Interaction
         /// </summary>
         public bool PanelUnscrewed { get; private set; }
 
-        /// <summary>The player has crawled out.</summary>
+        /// <summary>The player has got out of the shed.</summary>
         public bool Escaped { get; private set; }
 
         /// <summary>Fires whenever any of the above changes, for the HUD.</summary>
@@ -86,14 +86,8 @@ namespace Freedome.Interaction
             Changed?.Invoke();
         }
 
-        /// <summary>Puts everything back. Used by the pause menu's restart.</summary>
-        public void Reset()
-        {
-            DrawerForced = false;
-            LockRemoved = false;
-            PanelUnscrewed = false;
-            Escaped = false;
-            Changed?.Invoke();
-        }
+        // No Reset(). The pause menu restarts by reloading the scene, which builds
+        // a fresh EscapeState, so a reset method would be dead code that looks like
+        // a supported way to do it.
     }
 }
