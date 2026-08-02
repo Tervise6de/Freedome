@@ -219,6 +219,50 @@ namespace Freedome.Interaction
             _inventory.Select(_inventory.Count - 1);
         }
 
+        /// <summary>
+        /// Somewhere in front of the player's feet with room for the object.
+        ///
+        /// The old version tested one spot and, if it was occupied, fell back to the
+        /// player's own position - which is inside the character capsule, so a bucket
+        /// dropped facing a wall was spawned inside the person dropping it and then
+        /// shoved out by whichever contact resolved first. It also counted the
+        /// player's own collider as an obstruction, so that fallback fired far more
+        /// often than it looked like it would. Now it walks in and keeps the last
+        /// clear spot, and the shortest step it will accept still clears the capsule.
+        /// </summary>
+        private Vector3 FindDropSpot(Vector3 forward)
+        {
+            Collider self = GetComponent<Collider>();
+
+            for (float d = dropClearance; d >= 0.35f; d -= 0.10f)
+            {
+                Vector3 candidate = transform.position + (forward * d) + (Vector3.up * 0.12f);
+                if (IsClear(candidate, self))
+                {
+                    return candidate;
+                }
+            }
+
+            // Nowhere in front is clear - pressed into a corner, say. Put it down
+            // just above the floor at arm's length anyway rather than inside the
+            // player: the physics will settle it, and it is still reachable.
+            return transform.position + (forward * 0.35f) + (Vector3.up * 0.05f);
+        }
+
+        private static bool IsClear(Vector3 at, Collider self)
+        {
+            Collider[] hits = Physics.OverlapSphere(at, 0.12f, ~0, QueryTriggerInteraction.Ignore);
+            foreach (Collider c in hits)
+            {
+                if (c != self && !c.isTrigger)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public void Drop()
         {
             if (_carried == null)
@@ -232,14 +276,7 @@ namespace Freedome.Interaction
             forward.y = 0f;
             forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
 
-            Vector3 target = transform.position + (forward * dropClearance) + (Vector3.up * 0.12f);
-
-            // If that spot is inside something, drop it at the player's own feet
-            // instead. Crude, but it cannot wedge an object into a wall.
-            if (Physics.CheckSphere(target, 0.12f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                target = transform.position + (Vector3.up * 0.12f);
-            }
+            Vector3 target = FindDropSpot(forward);
 
             Carryable dropped = _carried;
             _carried = null;

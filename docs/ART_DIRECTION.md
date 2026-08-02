@@ -278,7 +278,7 @@ nine.
 
 ## Detail that exists so the game reads
 
-Two additions made for legibility rather than for looks, though they are both
+Additions made for legibility rather than for looks, though they are all
 improvements either way:
 
 - **Fixing screws on the rim lock case.** Four countersunk heads near the
@@ -291,5 +291,33 @@ improvements either way:
   and the shadow line between them is most of what says so. Too fine a chamfer
   and the leaf reads as one flat slab.
 
-Both are mirrored in `Tools/preview_render.py`, since the previews are the only
-place anyone can currently check whether they work.
+- **The rim lock case comes off.** It is its own object under the door leaf
+  rather than part of the leaf mesh, so that unscrewing it can actually take it
+  off the door. Watching a lock you had just unscrewed stay screwed on was the
+  one place in the route where doing the right thing changed nothing you could
+  see.
+- **A keep on the latch jamb** - the staple the rim lock's bolt shoots into,
+  with its two fixing screws. Without it the lock fastened to nothing, which is
+  not the sort of thing you notice in a plan and is very much the sort of thing
+  you notice standing in front of a door trying to get out.
+- **The screwdriver is a screwdriver.** Turned handle waisted at the palm, brass
+  ferrule, round shank, a flat tip spread wider than the bar. It was a square
+  block of timber with a wire in the end of it, which does not read as a tool at
+  any range you can pick it up from.
+- **The folding rule is folded.** Two leaves splayed a few degrees about a brass
+  hinge, one lying on the other's edge - a folded rule never quite shuts flat.
+  It was a single lath, which reads as scrap.
+- **Fixings through the roof sheeting.** Screws with sealing washers through
+  every third crest, on the line of each purlin, both slopes. Sheet steel is
+  fixed through the crest rather than the trough so the fixing sits above
+  standing water; it also means they read as rows of small bright dots rather
+  than as a seam.
+- **The corrugation runs down the slope**, which it did not before. Ribs laid
+  parallel to the ridge would have held water in every trough, and they gave the
+  eaves blocking a sheet of constant height to meet - so the crescents of
+  daylight LIGHTING.md describes did not exist as geometry at all.
+
+All of these are mirrored in `Tools/preview_render.py`, since the previews are
+the only place anyone can currently check whether they work. The two things
+inside the drawer are the exception: nothing renders the inside of a closed
+drawer, so their placement is held by tests instead.

@@ -23,37 +23,74 @@ namespace Freedome.EditorTools.Generation
         public const float CorrugationPitch = 0.076f;
         public const float CorrugationAmplitude = 0.016f;
 
-        /// <summary>Ridge cap wing, measured along the slope.</summary>
-        public const float CapWidth = 0.340f;
-
         /// <summary>
-        /// Distance down the slope from the ridge board to the centre of the cap
-        /// wing. Must be small enough that the wing's inner edge crosses the
-        /// centreline; <c>RidgeCapClosesTheApex</c> is what keeps it honest.
+        /// Purlin centres, measured down the slope from the ridge. Shared with the
+        /// sheet fixings, which have to land on a purlin to be holding anything.
         /// </summary>
-        public const float CapCentreOffset = 0.110f;
+        public static readonly float[] PurlinAlongSlope = { 0.30f, 1.10f, 1.90f, 2.45f };
+
+        /// <summary>Thickness of the folded ridge cap.</summary>
+        public const float CapThickness = 0.006f;
 
         /// <summary>
-        /// Signed x of the cap wing's inner edge, for the +x side. Negative means it
-        /// has crossed the apex and the two wings overlap, which is what closing the
-        /// ridge requires. Shared with the tests rather than recomputed there.
+        /// How far past the ridge centreline each cap wing reaches, measured
+        /// horizontally. This is the number that decides whether the roof is shut,
+        /// so it is the number the cap is built from - width and offset are worked
+        /// out from it rather than the other way round.
+        /// </summary>
+        public const float CapOverlapPastApex = 0.020f;
+
+        /// <summary>How far down the slope the cap laps over the sheeting.</summary>
+        public const float CapOuterEdgeAlongSlope = 0.280f;
+
+        /// <summary>
+        /// How far the cap is lifted off the rafter line: past the rafter, past the
+        /// purlin, and clear of the corrugation crests it sits on.
+        /// </summary>
+        public static float CapLift =>
+            Dim.RafterDepth + PurlinThickness + CorrugationAmplitude + 0.004f;
+
+        /// <summary>
+        /// Where the wing's own plane crosses x = 0, as a distance along the slope
+        /// from <c>ridgeStart</c>. Negative, because the apex is up-slope of where
+        /// the rafters butt the ridge board.
         ///
-        /// Crossing the centreline is necessary but not sufficient. The wings are
-        /// 6 mm boxes lying in two planes that meet at the apex, so they only
-        /// overlap in height within +/-7.4 mm of it - thickness / (2 tan(pitch)).
-        /// An earlier fix crossed by exactly 6 mm, which put the chamfered edges
-        /// inside that band and still showed a hairline of sky in the preview.
-        /// RidgeCapSealBandHalfWidth is what the test compares against.
+        /// The lift matters here and is easy to drop. Offsetting the cap along the
+        /// slope normal moves it horizontally as well as vertically - by
+        /// sin(pitch) x lift, which at 22 degrees over 155 mm is 58 mm. A version of
+        /// this file computed the inner edge without that term, reported it as
+        /// 43 mm past the apex, and passed its own test while the real edge sat
+        /// 15 mm short of the ridge board face. The result was a 2.5 mm slot down
+        /// each side of the ridge board, the full 6.9 m of the building.
+        /// </summary>
+        private static float CapApexAlongSlope =>
+            -(RidgeOffset + (Mathf.Sin(Theta) * CapLift)) / CosTheta;
+
+        private static float CapInnerEdgeAlongSlope =>
+            CapApexAlongSlope - (CapOverlapPastApex / CosTheta);
+
+        /// <summary>Ridge cap wing, measured along the slope.</summary>
+        public static float CapWidth => CapOuterEdgeAlongSlope - CapInnerEdgeAlongSlope;
+
+        /// <summary>Distance down the slope from the ridge board to the wing's centre.</summary>
+        public static float CapCentreOffset =>
+            (CapOuterEdgeAlongSlope + CapInnerEdgeAlongSlope) * 0.5f;
+
+        /// <summary>
+        /// Signed x of the cap wing's inner edge, for the +x side, read off the box
+        /// the builder actually places rather than derived a second time. Negative
+        /// means the wing has crossed the apex, which is what closing the ridge
+        /// requires.
         /// </summary>
         public static float RidgeCapInnerEdgeX =>
-            RidgeOffset + ((CapCentreOffset - (CapWidth * 0.5f)) * CosTheta);
+            (CapWingCentre(1) + (SlopeRotation(1) * new Vector3(-CapWidth * 0.5f, 0f, 0f))).x;
 
         /// <summary>
         /// How far either side of the apex the two wings actually overlap in height.
         /// The wings must reach comfortably past this, not merely past zero.
         /// </summary>
         public static float RidgeCapSealBandHalfWidth =>
-            0.006f / (2f * Mathf.Tan(Theta));
+            CapThickness / (2f * Mathf.Tan(Theta));
         public const float BargeThickness = 0.019f;
         public const float FasciaHeight = 0.140f;
 
@@ -157,8 +194,7 @@ namespace Freedome.EditorTools.Generation
             }
 
             // --- purlins, carrying the sheeting ---------------------------------
-            float[] purlinAlongSlope = { 0.30f, 1.10f, 1.90f, 2.45f };
-            foreach (float t in purlinAlongSlope)
+            foreach (float t in PurlinAlongSlope)
             {
                 if (t > length)
                 {
@@ -212,6 +248,46 @@ namespace Freedome.EditorTools.Generation
 
         private static void BuildCovering(BuildContext ctx, Transform parent)
         {
+            ctx.CreateObject("Shed_RoofSheeting", BuildCoveringMesh(), new[] { Keys.Galvanised },
+                parent, Vector3.zero, Quaternion.identity, BuildContext.ColliderKind.Mesh);
+        }
+
+        /// <summary>Where the point of the roof is, on a given side, before lifting.</summary>
+        private static Vector3 RidgeStart(int side) =>
+            new Vector3(side * RidgeOffset, UndersideY(RidgeOffset), 0f);
+
+        private static Vector3 AlongSlope(int side) =>
+            new Vector3(side * CosTheta, -Mathf.Sin(Theta), 0f);
+
+        /// <summary>
+        /// The frame a sheet of roofing is laid in: local +Z runs down the slope,
+        /// local +Y is the slope normal, and local +X - the axis
+        /// <see cref="MeshBuilder.AddCorrugatedSheet"/> corrugates along - runs
+        /// horizontally, so the ribs run down the slope and the troughs drain.
+        ///
+        /// Not <see cref="SlopeRotation"/>, which is built for boxes and is not
+        /// mirrored between the two slopes: its local +X points down the +X slope
+        /// but *up* the -X one. A box does not care, because a box is symmetric
+        /// about its centre. A sheet laid from a corner does: the -X sheeting was
+        /// laid from the ridge up and over, which put both sheets on the +X side of
+        /// the building and left the whole storage-side slope open to the sky.
+        /// </summary>
+        private static Quaternion SheetRotation(int side) =>
+            Quaternion.LookRotation(AlongSlope(side), SlopeNormal(side));
+
+        /// <summary>
+        /// Centre of one ridge cap wing. Its own function because the tests need the
+        /// position the builder uses, not a second derivation of it.
+        /// </summary>
+        public static Vector3 CapWingCentre(int side) =>
+            RidgeStart(side) + (AlongSlope(side) * CapCentreOffset) + (SlopeNormal(side) * CapLift);
+
+        /// <summary>
+        /// The sheeting, its fixings and the folded ridge cap, with no scene objects
+        /// involved, so a test can build it and look through it.
+        /// </summary>
+        public static MeshBuilder BuildCoveringMesh()
+        {
             MeshBuilder mb = new MeshBuilder("Shed_RoofSheeting", 1);
             mb.UvScale = 1f;
 
@@ -219,41 +295,89 @@ namespace Freedome.EditorTools.Generation
 
             for (int side = -1; side <= 1; side += 2)
             {
-                Vector3 n = SlopeNormal(side);
-                Vector3 ridgeStart = new Vector3(side * RidgeOffset, UndersideY(RidgeOffset), 0f);
-                Vector3 origin = ridgeStart
-                                 + (n * (Dim.RafterDepth + PurlinThickness))
-                                 + new Vector3(0f, 0f, -RoofHalfLength);
+                // Lifted by half the amplitude so the sheet *rests* on the purlin
+                // at its troughs instead of being centred on it. Centred, the trough
+                // line cut 8 mm into every purlin it crossed, and with the ribs
+                // running down the slope that is every purlin on the building: the
+                // timber showed through the roof as a dotted line from ridge to eave.
+                Vector3 origin = RidgeStart(side)
+                                 + (SlopeNormal(side) *
+                                    (Dim.RafterDepth + PurlinThickness + (CorrugationAmplitude * 0.5f)))
+                                 + new Vector3(0f, 0f, side * RoofHalfLength);
 
-                mb.AddCorrugatedSheet(origin, SlopeRotation(side), length, RoofHalfLength * 2f,
+                mb.AddCorrugatedSheet(origin, SheetRotation(side), RoofHalfLength * 2f, length,
                                       CorrugationPitch, CorrugationAmplitude, 0);
             }
 
             // Ridge capping: two wings, one lying in each slope plane, meeting over
-            // the apex the way a folded cap does.
-            //
-            // The inner edge has to cross x = 0, not merely reach the ridge board.
-            // The sheets stop at ridgeStart, which is half the ridge board's
-            // thickness out from the centreline, so the cap is the only thing
-            // closing that slot. At the previous 0.14 m the wings stopped 3.2 mm
-            // short of the centreline each, leaving a 6.5 mm gap straight through
-            // the roof for the whole 6.9 m of the ridge - a hard line of daylight
-            // down the apex. CapCentreOffset is what closes it, with 12 mm of
-            // overlap so the two wings interpenetrate slightly at the fold.
+            // the apex the way a folded cap does. The sheets stop at the ridge board,
+            // so the cap is the only thing closing that slot; CapOverlapPastApex is
+            // how far each wing carries past the centreline to do it.
             for (int side = -1; side <= 1; side += 2)
             {
-                Vector3 n = SlopeNormal(side);
-                Vector3 alongSlope = new Vector3(side * CosTheta, -Mathf.Sin(Theta), 0f);
-                Vector3 ridgeStart = new Vector3(side * RidgeOffset, UndersideY(RidgeOffset), 0f);
-                Vector3 centre = ridgeStart + (alongSlope * CapCentreOffset)
-                                 + (n * (Dim.RafterDepth + PurlinThickness + CorrugationAmplitude + 0.004f));
-
-                mb.AddBox(centre, new Vector3(CapWidth, 0.006f, RoofHalfLength * 2f),
+                mb.AddBox(CapWingCentre(side),
+                          new Vector3(CapWidth, CapThickness, RoofHalfLength * 2f),
                           SlopeRotation(side), 0, 0.002f);
             }
 
-            ctx.CreateObject("Shed_RoofSheeting", mb, new[] { Keys.Galvanised },
-                parent, Vector3.zero, Quaternion.identity, BuildContext.ColliderKind.Mesh);
+            AddSheetFixings(mb);
+            return mb;
+        }
+
+        /// <summary>
+        /// Screws with sealing washers through the crest of every third corrugation,
+        /// on the line of each purlin. Sheet steel is fixed through the crest, not
+        /// the trough, so the fixing sits above standing water - which is also why
+        /// they read as a row of small bright dots rather than a seam.
+        /// </summary>
+        private static void AddSheetFixings(MeshBuilder mb)
+        {
+            float length = RafterLength;
+
+            // Crests sit a quarter-pitch in from the sheet's edge and repeat at the
+            // pitch. Every third one is fixed, which is the usual spacing and keeps
+            // the count down: four purlins x two slopes x 30 crests would be 240
+            // screws, and none of them is worth a draw call it does not need.
+            const int EveryNthCrest = 3;
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 n = SlopeNormal(side);
+                Vector3 along = AlongSlope(side);
+                // SlopeRotation already puts local +Y on the slope normal, which is
+                // the axis a screw driven into the roof stands on.
+                Quaternion upright = SlopeRotation(side);
+
+                // On the crest line, so the fixing sits above the water rather than
+                // in it - which is also why it reads as a dot rather than a seam.
+                Vector3 crestPlane = RidgeStart(side)
+                                     + (n * (Dim.RafterDepth + PurlinThickness + CorrugationAmplitude));
+
+                foreach (float t in PurlinAlongSlope)
+                {
+                    if (t > length)
+                    {
+                        continue;
+                    }
+
+                    for (int c = 0; ; c += EveryNthCrest)
+                    {
+                        // Measured from the sheet's own starting edge, which is the
+                        // gable the sheet was laid from - and that is a different end
+                        // of the building on each slope.
+                        float acrossSheet = (0.25f + c) * CorrugationPitch;
+                        float z = side * (RoofHalfLength - acrossSheet);
+                        if (acrossSheet > RoofHalfLength * 2f)
+                        {
+                            break;
+                        }
+
+                        Vector3 at = crestPlane + (along * t) + new Vector3(0f, 0f, z);
+                        mb.AddCylinder(at + (n * 0.003f), 0.010f, 0.010f, 0.002f, 8, 0, upright);
+                        mb.AddCylinder(at + (n * 0.006f), 0.005f, 0.004f, 0.005f, 6, 0, upright);
+                    }
+                }
+            }
         }
 
         // =====================================================================
@@ -323,8 +447,10 @@ namespace Freedome.EditorTools.Generation
         /// <summary>Height of the bottom of the corrugation troughs at a given X.</summary>
         public static float TroughY(float x)
         {
-            float centreLine = UndersideY(x) + ((Dim.RafterDepth + PurlinThickness) / CosTheta);
-            return centreLine - (CorrugationAmplitude * 0.5f);
+            // The sheet sits on the purlin at its troughs, so the trough line is
+            // the purlin face - no amplitude term, which is the whole point of
+            // lifting the sheet in BuildCoveringMesh.
+            return UndersideY(x) + ((Dim.RafterDepth + PurlinThickness) / CosTheta);
         }
     }
 }

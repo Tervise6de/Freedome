@@ -312,6 +312,100 @@ namespace Freedome.Tests.EditMode
         // Roof closure
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// The one that matters: build the covering and try to see through it.
+        ///
+        /// Every arithmetic version of this check has been fooled at least once,
+        /// because the sum being checked was not the sum the builder used. This
+        /// looks at the triangles instead. A vertical ray from above the ridge that
+        /// reaches the room is a hole in the roof, whatever the numbers say.
+        /// </summary>
+        [Test]
+        public void NothingSeesThroughTheRoof()
+        {
+            Mesh mesh = RoofBuilder.BuildCoveringMesh().ToMesh();
+            Vector3[] verts = mesh.vertices;
+            int[] tris = mesh.triangles;
+
+            // Fine across the ridge, where the gap that has to be closed is a few
+            // millimetres, and coarse across the slopes, where the thing being
+            // looked for is a missing sheet.
+            List<Vector3> open = new List<Vector3>();
+            int probes = 0;
+
+            foreach (float z in new[] { -3.0f, -1.2f, 0.4f, 2.1f, 3.2f })
+            {
+                for (float x = -0.30f; x <= 0.30f; x += 0.0005f)
+                {
+                    probes++;
+                    if (!HitsSomething(new Vector3(x, 8f, z), Vector3.down, verts, tris))
+                    {
+                        open.Add(new Vector3(x, 0f, z));
+                    }
+                }
+
+                for (float x = -2.10f; x <= 2.10f; x += 0.03f)
+                {
+                    probes++;
+                    if (!HitsSomething(new Vector3(x, 8f, z), Vector3.down, verts, tris))
+                    {
+                        open.Add(new Vector3(x, 0f, z));
+                    }
+                }
+            }
+
+            Assert.AreEqual(0, open.Count,
+                open.Count == 0 ? "" :
+                $"{open.Count} of {probes} sample columns pass straight through the roof; " +
+                $"first at x = {open[0].x * 1000f:0} mm, z = {open[0].z:0.00} m");
+        }
+
+        private static bool HitsSomething(Vector3 origin, Vector3 direction,
+                                          Vector3[] verts, int[] tris)
+        {
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                if (RayHitsTriangle(origin, direction,
+                                    verts[tris[i]], verts[tris[i + 1]], verts[tris[i + 2]]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Moller-Trumbore, two-sided: a hole is a hole from either face.</summary>
+        private static bool RayHitsTriangle(Vector3 origin, Vector3 direction,
+                                            Vector3 a, Vector3 b, Vector3 c)
+        {
+            Vector3 e1 = b - a;
+            Vector3 e2 = c - a;
+            Vector3 p = Vector3.Cross(direction, e2);
+            float det = Vector3.Dot(e1, p);
+            if (Mathf.Abs(det) < 1e-12f)
+            {
+                return false;
+            }
+
+            float inv = 1f / det;
+            Vector3 t = origin - a;
+            float u = Vector3.Dot(t, p) * inv;
+            if (u < 0f || u > 1f)
+            {
+                return false;
+            }
+
+            Vector3 q = Vector3.Cross(t, e1);
+            float v = Vector3.Dot(direction, q) * inv;
+            if (v < 0f || u + v > 1f)
+            {
+                return false;
+            }
+
+            return Vector3.Dot(e2, q) * inv > 1e-4f;
+        }
+
         [Test]
         public void RidgeCapClosesTheApex()
         {

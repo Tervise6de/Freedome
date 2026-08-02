@@ -93,6 +93,39 @@ namespace Freedome.EditorTools.Generation
                 Quaternion.identity, BuildContext.ColliderKind.Box);
         }
 
+        // ---------------------------------------------------------------------
+        // Drawer carcass, as numbers rather than locals
+        //
+        // The two things that go in a drawer used to be positioned by eye against
+        // these, and both were wrong. Anything inside a closed drawer is invisible
+        // until somebody opens it, so the only way to be sure is to derive the
+        // placement from the box and then check it.
+        // ---------------------------------------------------------------------
+
+        public const float DrawerBankWidth = 0.62f;   // along Z
+
+        private static float DrawerCarcassBottom => 0.26f;
+
+        private static float DrawerCarcassHeight =>
+            (Dim.BenchHeight - Dim.BenchTopThickness - 0.10f) - DrawerCarcassBottom;
+
+        private static float DrawerCarcassDepth => Dim.BenchDepth - 0.09f;
+
+        public static float DrawerFrontHeight => (DrawerCarcassHeight - 0.014f) * 0.5f;
+
+        /// <summary>Clear height inside the box, front to back.</summary>
+        public static float DrawerBoxHeight => DrawerFrontHeight - 0.020f;
+
+        public static float DrawerBoxDepth => DrawerCarcassDepth - 0.030f;
+
+        /// <summary>Centre of the box, along the drawer's own +X (into the carcass).</summary>
+        public static float DrawerBoxMidX => (DrawerBoxDepth * 0.5f) + 0.012f;
+
+        public static float DrawerInnerWidth => DrawerBankWidth - 0.030f;
+
+        /// <summary>Thickness of the board a drawer's contents actually sit on.</summary>
+        public static float DrawerBottomThickness => Dim.BoardThickness * 0.6f;
+
         /// <summary>
         /// The carcass stays in the shared bench mesh; the two drawers come out as
         /// their own objects because they slide. Each is a real box - bottom, sides,
@@ -103,9 +136,9 @@ namespace Freedome.EditorTools.Generation
                                             Vector3 centre, float depth, float legTop,
                                             Vector3 benchOrigin)
         {
-            const float BankWidth = 0.62f;  // along Z
+            const float BankWidth = DrawerBankWidth;  // along Z
             float carcassTop = legTop - 0.10f;
-            float carcassBottom = 0.26f;
+            float carcassBottom = DrawerCarcassBottom;
             float height = carcassTop - carcassBottom;
             float d = depth - 0.09f;
 
@@ -201,40 +234,135 @@ namespace Freedome.EditorTools.Generation
                                   ToolGatedFixture.Effect.ForceDrawer);
             }
 
-            BuildDrawerContents(ctx, drawer.transform, index, mid, boxHeight);
+            BuildDrawerContents(ctx, drawer.transform, index);
         }
 
         /// <summary>
-        /// What is in the drawers. A tin of screws in one, a folding rule in the
+        /// One thing lying in a drawer, in that drawer's own local frame.
+        /// </summary>
+        public struct DrawerItem
+        {
+            public string Name;
+            public int Drawer;
+
+            /// <summary>Centre of the object, local to the drawer it rides in.</summary>
+            public Vector3 Centre;
+
+            /// <summary>Half-extents of what was actually built, for the tests.</summary>
+            public Vector3 HalfSize;
+        }
+
+        /// <summary>
+        /// What is in the drawers, and where.
+        ///
+        /// Written down rather than left inline because both of these were placed by
+        /// eye against the carcass and both were wrong in opposite directions - the
+        /// screwdriver sat 7 mm into the drawer bottom and the folding rule floated
+        /// 6 mm over it. Nothing inside a closed drawer can be seen until somebody
+        /// opens it, so the placement has to come from the box and then be checked
+        /// against it.
+        /// </summary>
+        public static readonly DrawerItem[] DrawerContents =
+        {
+            new DrawerItem
+            {
+                Name = "screwdriver", Drawer = 0,
+                Centre = new Vector3(DrawerBoxMidX - 0.05f, RestOn(0.0165f), -0.10f),
+                HalfSize = new Vector3(0.100f, 0.0165f, 0.0165f),
+            },
+            new DrawerItem
+            {
+                Name = "folding rule", Drawer = 1,
+                Centre = new Vector3(DrawerBoxMidX - 0.03f, RestOn(0.0063f), 0.06f),
+                HalfSize = new Vector3(0.076f, 0.0063f, 0.014f),
+            },
+        };
+
+        /// <summary>
+        /// The height an object of a given half-height rests at inside a drawer: on
+        /// the top face of the bottom board, not through it and not above it.
+        /// </summary>
+        private static float RestOn(float halfHeight) =>
+            -(DrawerBoxHeight * 0.5f) + (DrawerBottomThickness * 0.5f) + halfHeight;
+
+        private static DrawerItem ItemFor(int drawer)
+        {
+            foreach (DrawerItem item in DrawerContents)
+            {
+                if (item.Drawer == drawer)
+                {
+                    return item;
+                }
+            }
+
+            return default;
+        }
+
+        /// <summary>
+        /// What is in the drawers. A screwdriver in one, a folding rule in the
         /// other - both carryable, both kinematic until first handled so they ride
         /// the drawer instead of being shoved through its bottom.
         /// </summary>
-        private static void BuildDrawerContents(BuildContext ctx, Transform drawer, int index,
-                                                float boxMidX, float boxHeight)
+        private static void BuildDrawerContents(BuildContext ctx, Transform drawer, int index)
         {
-            float restY = -(boxHeight * 0.5f) + 0.012f;
+            DrawerItem item = ItemFor(index);
 
             if (index == 0)
             {
                 // The screwdriver. It is in a drawer because that is where a
                 // screwdriver lives, not because it is hidden - the drawer opens
                 // whether or not anybody ever needs what is in it.
+                //
+                // Turned handle, ferrule, shank, tip: four parts, because a square
+                // block with a wire in the end of it does not read as a tool at any
+                // range you can pick it up from.
+                const float HandleRadius = 0.0165f;
                 MeshBuilder mb = new MeshBuilder("Carry_Screwdriver", 2);
-                PropLibrary.Timber(mb, new Vector3(-0.055f, 0f, 0f),
-                                   new Vector3(0.110f, 0.026f, 0.026f), Quaternion.identity, 0);
-                mb.AddCylinder(new Vector3(0.055f, 0f, 0f), 0.005f, 0.004f, 0.110f, 8, 1,
+
+                // Handle, waisted the way a moulded one is: fat at the palm, narrow
+                // at the ferrule.
+                mb.AddCylinder(new Vector3(-0.082f, 0f, 0f), 0.0115f, HandleRadius, 0.028f, 12, 0,
                                Quaternion.Euler(0f, 0f, 90f));
+                mb.AddCylinder(new Vector3(-0.050f, 0f, 0f), HandleRadius, HandleRadius * 0.86f,
+                               0.036f, 12, 0, Quaternion.Euler(0f, 0f, 90f));
+                mb.AddCylinder(new Vector3(-0.022f, 0f, 0f), HandleRadius * 0.86f, 0.0092f,
+                               0.020f, 12, 0, Quaternion.Euler(0f, 0f, 90f));
+
+                // Ferrule, then the shank, then a flat tip spread wider than the bar.
+                mb.AddCylinder(new Vector3(-0.008f, 0f, 0f), 0.0092f, 0.0092f, 0.014f, 12, 1,
+                               Quaternion.Euler(0f, 0f, 90f));
+                mb.AddCylinder(new Vector3(0.043f, 0f, 0f), 0.0042f, 0.0042f, 0.088f, 10, 1,
+                               Quaternion.Euler(0f, 0f, 90f));
+                mb.AddBox(new Vector3(0.093f, 0f, 0f), new Vector3(0.014f, 0.0022f, 0.0090f), 1);
+
                 Attach(ctx, mb, "Carry_Screwdriver", new[] { Keys.PaintedRed, Keys.DarkSteel },
-                       drawer, new Vector3(boxMidX - 0.05f, restY, -0.10f),
+                       drawer, item.Centre,
                        "screwdriver", 0.2f, new Vector3(0.22f, -0.18f, 0.36f));
             }
             else
             {
-                MeshBuilder mb = new MeshBuilder("Carry_FoldingRule", 1);
-                PropLibrary.Timber(mb, Vector3.zero, new Vector3(0.230f, 0.012f, 0.028f),
-                                   Quaternion.identity, 0);
-                Attach(ctx, mb, "Carry_FoldingRule", new[] { Keys.StructuralPine },
-                       drawer, new Vector3(boxMidX, restY + 0.006f, 0.06f),
+                // A boxwood rule, folded once and left slightly open, which is how
+                // one ends up in a drawer. Two leaves and a brass hinge read as a
+                // rule; one lath reads as a piece of scrap.
+                const float LeafThickness = 0.006f;
+                const float LeafLength = 0.152f;
+                MeshBuilder mb = new MeshBuilder("Carry_FoldingRule", 2);
+
+                foreach (int sy in new[] { -1, 1 })
+                {
+                    // Splayed a few degrees about the hinge, one leaf lying on the
+                    // other's edge - a folded rule never quite shuts flat.
+                    mb.AddBox(new Vector3((LeafLength * 0.5f) - 0.012f,
+                                          sy * LeafThickness * 0.55f, 0f),
+                              new Vector3(LeafLength, LeafThickness, 0.026f),
+                              Quaternion.Euler(0f, sy * 5f, 0f), 0, 0.0012f);
+                }
+
+                mb.AddCylinder(new Vector3(-0.012f, 0f, 0f), 0.0075f, 0.0075f, 0.028f, 10, 1,
+                               Quaternion.Euler(90f, 0f, 0f));
+
+                Attach(ctx, mb, "Carry_FoldingRule", new[] { Keys.StructuralPine, Keys.Hardware },
+                       drawer, item.Centre,
                        "folding rule", 0.2f, new Vector3(0.24f, -0.20f, 0.40f));
             }
         }

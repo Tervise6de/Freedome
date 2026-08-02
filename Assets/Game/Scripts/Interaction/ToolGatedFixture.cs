@@ -30,12 +30,36 @@ namespace Freedome.Interaction
         [SerializeField] private string readyPrompt = "Unscrew the panel";
         [SerializeField] private string donePrompt = "The screws are out";
         [SerializeField] private Effect effect = Effect.UnscrewPanel;
+        [SerializeField] private GameObject[] removeWhenDone = new GameObject[0];
 
         private EscapeState _state;
+        private Collider _reach;
 
         private void Awake()
         {
             _state = EscapeState.Find();
+            _reach = GetComponent<Collider>();
+            StandDown();
+        }
+
+        /// <summary>
+        /// Once the job is done, get out of the way.
+        ///
+        /// These fixtures sit on a collider in front of the thing they are attached
+        /// to, so that looking at the screws finds the screws rather than the panel
+        /// behind them. That is right until the screws are out, at which point the
+        /// fixture is still the first thing the interaction ray meets and the thing
+        /// behind it can never be reached. The drawer was the fatal case: its
+        /// fixture covers the whole drawer front, so a drawer that had just been
+        /// levered free could not then be opened, and the way out of the shed
+        /// stopped at step two.
+        /// </summary>
+        private void StandDown()
+        {
+            if (_reach != null)
+            {
+                _reach.enabled = !IsDone;
+            }
         }
 
         private bool IsDone
@@ -101,6 +125,28 @@ namespace Freedome.Interaction
                 case Effect.RemoveLock: _state.SetLockRemoved(); break;
                 default: _state.SetPanelUnscrewed(); break;
             }
+
+            StandDown();
+
+            // What came off, comes off. Anything parented under the fixture is the
+            // part it was holding on - the rim lock case and its screws - and a lock
+            // you have just unscrewed should not still be screwed to the door.
+            for (int i = 0; i < removeWhenDone.Length; i++)
+            {
+                if (removeWhenDone[i] != null)
+                {
+                    removeWhenDone[i].SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Objects that stop existing once this fixture has done its job. Set by the
+        /// generator; empty for fixtures that only unlock something.
+        /// </summary>
+        public void Removes(params GameObject[] parts)
+        {
+            removeWhenDone = parts ?? new GameObject[0];
         }
 
         public void Configure(string item, string idle, string ready, string done, Effect what)

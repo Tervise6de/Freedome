@@ -224,5 +224,47 @@ namespace Freedome.Tests.PlayMode
             Assert.IsFalse(toggle.IsOn);
             Assert.IsFalse(lamp.enabled, "the switch did not turn the lamp off");
         }
+
+        /// <summary>
+        /// The one that closes the route.
+        ///
+        /// A tool-gated fixture sits on a collider in front of whatever it is holding
+        /// shut, so that the interaction ray finds the screws rather than the thing
+        /// behind them. It has to give that up once its job is done. On the drawer,
+        /// where the fixture covers the whole drawer front, keeping it meant the
+        /// drawer could be levered free and then never opened.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AFinishedFixtureStopsBlockingWhatIsBehindIt()
+        {
+            GameObject stateGo = new GameObject("EscapeState");
+            stateGo.transform.SetParent(_root.transform, false);
+            EscapeState state = stateGo.AddComponent<EscapeState>();
+
+            GameObject fixtureGo = new GameObject("Fixture");
+            fixtureGo.transform.SetParent(_root.transform, false);
+            Collider reach = fixtureGo.AddComponent<BoxCollider>();
+
+            ToolGatedFixture fixture = fixtureGo.AddComponent<ToolGatedFixture>();
+            fixture.Configure("offcut", "Swollen shut", "Lever it open", "It moves freely now",
+                              ToolGatedFixture.Effect.ForceDrawer);
+            yield return null;
+
+            Assert.IsTrue(reach.enabled, "the fixture was not in the way to begin with");
+
+            PlayerInteractor interactor = MakeInteractor();
+            Carryable offcut = MakeCarryable("timber offcut");
+            yield return null;
+
+            interactor.TryCarry(offcut);
+            yield return null;
+
+            fixture.Interact(interactor);
+            yield return null;
+
+            Assert.IsTrue(state.DrawerForced, "using the offcut on the fixture did nothing");
+            Assert.IsFalse(reach.enabled,
+                "the finished fixture is still the first thing the interaction ray meets");
+        }
     }
 }

@@ -463,6 +463,8 @@ namespace UnityEngine
         public static RaycastHit[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance) { return null; }
         public static bool CheckSphere(Vector3 position, float radius) { return false; }
         public static Collider[] OverlapSphere(Vector3 position, float radius) { return null; }
+        public static Collider[] OverlapSphere(Vector3 position, float radius, int layerMask,
+                                               QueryTriggerInteraction queryTriggerInteraction) { return null; }
         public static bool ComputePenetration(Collider colliderA, Vector3 positionA, Quaternion rotationA, Collider colliderB, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float distance) { direction = default(Vector3); distance = 0f; return false; }
         public static void SyncTransforms() { }
 

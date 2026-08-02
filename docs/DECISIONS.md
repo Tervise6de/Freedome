@@ -338,15 +338,29 @@ sensible.
 
 ---
 
-## The ridge cap did not close
+## The ridge cap did not close, and neither did the rest of the roof
 
-**Found** by reading the roof covering while looking for something else.
+**Found** by reading the roof covering while looking for something else, and then
+- twice more - by ray-casting the mesh the builder actually produces.
 
 The corrugated sheets stop at the ridge board, so the two cap wings are the only
 thing covering the slot between them. Each wing reached 3.2 mm short of the
 centreline, leaving **6.5 mm of open sky running the full 6.9 m of the ridge** -
 a hard line of daylight down the apex of the ceiling, and rain into the middle
 of the room.
+
+Two attempts at that arithmetic later, the roof was still open, and the reason
+is worth writing down: **the sums being checked were not the sums the builder
+used.** `RidgeCapInnerEdgeX` left out the horizontal component of the cap's own
+lift and reported 43 mm of overlap where there was a 2.5 mm slot; the same class
+of mistake in `SlopeRotation` meant one whole slope had never had any sheeting
+on it at all. Every one of those versions had a passing test.
+
+**Decision.** Roof closure is checked by casting rays through the built
+triangles, not by comparing numbers. `NothingSeesThroughTheRoof` fires 6,710
+vertical rays at the covering mesh and fails on the first one that gets through.
+It is slower than arithmetic, it is the only check here that has ever found this
+class of fault, and it cannot be fooled by agreeing with the code.
 
 Fixed by moving the wings 10 mm further up the slope so they overlap by 12 mm
 across the apex. `RidgeCapClosesTheApex` now asserts the inner edge crosses

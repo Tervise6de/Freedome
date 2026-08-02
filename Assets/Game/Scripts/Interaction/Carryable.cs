@@ -23,7 +23,12 @@ namespace Freedome.Interaction
         [SerializeField] private bool restingInContainer;
 
         private Rigidbody _body;
-        private Transform _originalParent;
+
+        /// <summary>
+        /// Where a dropped object belongs: the group its container hangs off, or the
+        /// scene root. Never the container itself - see <see cref="Release"/>.
+        /// </summary>
+        private Transform _looseParent;
 
         public string DisplayName
         {
@@ -55,7 +60,13 @@ namespace Freedome.Interaction
         private void Awake()
         {
             _body = GetComponent<Rigidbody>();
-            _originalParent = transform.parent;
+
+            // Something that starts inside a moving container has to leave that
+            // container behind when it is put down; something that starts loose stays
+            // where it was in the hierarchy.
+            _looseParent = restingInContainer
+                ? (transform.parent != null ? transform.parent.parent : null)
+                : transform.parent;
 
             if (restingInContainer)
             {
@@ -125,7 +136,11 @@ namespace Freedome.Interaction
             // Once it has been handled it is loose, wherever it started.
             restingInContainer = false;
 
-            transform.SetParent(_originalParent, true);
+            // Back to the scene root, not to whatever it came out of. The screwdriver
+            // and the folding rule start life parented to a drawer, and putting one
+            // down in the middle of the room used to re-adopt it: closing the drawer
+            // afterwards dragged it back across the floor, or into the bench.
+            transform.SetParent(_looseParent, true);
             transform.position = position;
 
             _body.isKinematic = false;

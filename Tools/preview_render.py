@@ -108,7 +108,7 @@ def roof_underside(x):
 
 def trough_y(x):
     """Underside of the corrugation troughs - what the gable and eaves close up to."""
-    return roof_underside(x) + (RAFTER_D + PURLIN_T) / math.cos(PITCH) - 0.008
+    return roof_underside(x) + (RAFTER_D + PURLIN_T) / math.cos(PITCH)
 
 
 def slope_rot(side):
@@ -373,41 +373,66 @@ def build_roof(m):
             c = start + along * t + n * (RAFTER_D + PURLIN_T / 2)
             m.box(tuple(c), (0.07, PURLIN_T, ROOF_HL * 2), jitter(PINE, 0.08), r)
 
-    # corrugated sheeting, sampled across the slope
-    samples = 34
+    # Corrugated sheeting. The ribs run *down* the slope, so the troughs drain and
+    # so the profile crosses the eave line - which is where the crescents of
+    # daylight above the walls come from. Mirrors RoofBuilder.SheetRotation.
+    pitch_m = D.get("CorrPitch", 0.076)
+    per_rib = 4
+    steps = int(ROOF_HL * 2 / pitch_m) * per_rib
     for side in (-1, 1):
-        r = slope_rot(side)
         n = np.array([side * math.sin(PITCH), math.cos(PITCH), 0.0])
         along = np.array([side * math.cos(PITCH), -math.sin(PITCH), 0.0])
         start = np.array([side * ridge_off, roof_underside(ridge_off), 0.0]) \
-            + n * (RAFTER_D + PURLIN_T)
+            + n * (RAFTER_D + PURLIN_T + 0.008)
         prev = None
-        for i in range(samples + 1):
-            t = length * i / samples
-            phase = t / D.get("CorrPitch", 0.076) * math.pi * 2
+        for i in range(steps + 1):
+            across = ROOF_HL * 2 * i / steps
+            phase = across / pitch_m * math.pi * 2
             off = math.sin(phase) * 0.016 * 0.5
-            p = start + along * t + n * off
+            z = side * (ROOF_HL - across)
+            here = (start + n * off + np.array([0.0, 0.0, z]), phase)
             if prev is not None:
-                shade = 0.80 + 0.30 * (0.5 + 0.5 * math.cos(phase))
+                p0, ph0 = prev
+                p1, _ = here
+                shade = 0.80 + 0.30 * (0.5 + 0.5 * math.cos(ph0))
                 col = tuple(np.array(GALV) * shade)
-                a = prev + np.array([0, 0, -ROOF_HL])
-                b = p + np.array([0, 0, -ROOF_HL])
-                c = p + np.array([0, 0, ROOF_HL])
-                d = prev + np.array([0, 0, ROOF_HL])
-                m.quad(tuple(a), tuple(b), tuple(c), tuple(d), col)
-            prev = p
+                m.quad(tuple(p0), tuple(p1),
+                       tuple(p1 + along * length), tuple(p0 + along * length), col)
+            prev = here
 
-    # ridge capping, folded over the apex
+    # Ridge capping, folded over the apex. Mirrors RoofBuilder's derived
+    # CapCentreOffset / CapWidth: the wings are placed so that each one carries
+    # CapOverlapPastApex past the centreline *after* the slope-normal lift has
+    # pushed it sideways, which is the term the C# used to leave out.
+    cap_lift = RAFTER_D + PURLIN_T + 0.016 + 0.004
+    apex_t = -(ridge_off + math.sin(PITCH) * cap_lift) / math.cos(PITCH)
+    inner_t = apex_t - 0.020 / math.cos(PITCH)
+    cap_w = 0.280 - inner_t
+    cap_off = (0.280 + inner_t) / 2
     for side in (-1, 1):
         r = slope_rot(side)
         n = np.array([side * math.sin(PITCH), math.cos(PITCH), 0.0])
         along = np.array([side * math.cos(PITCH), -math.sin(PITCH), 0.0])
         start = np.array([side * ridge_off, roof_underside(ridge_off), 0.0])
-        # Mirrors RoofBuilder.CapCentreOffset / CapWidth. At the original 0.14 each
-        # wing stopped 3.2 mm short of the centreline and the two never met, which
-        # is the bright line down the apex in earlier renders of this view.
-        c = start + along * 0.11 + n * (RAFTER_D + PURLIN_T + 0.016 + 0.004)
-        m.box(tuple(c), (0.34, 0.006, ROOF_HL * 2), GALV, r)
+        c = start + along * cap_off + n * cap_lift
+        m.box(tuple(c), (cap_w, 0.006, ROOF_HL * 2), GALV, r)
+
+    # Sheet fixings: screws with sealing washers through every third crest, on the
+    # line of each purlin.
+    for side in (-1, 1):
+        n = np.array([side * math.sin(PITCH), math.cos(PITCH), 0.0])
+        along = np.array([side * math.cos(PITCH), -math.sin(PITCH), 0.0])
+        crest = np.array([side * ridge_off, roof_underside(ridge_off), 0.0]) \
+            + n * (RAFTER_D + PURLIN_T + 0.016)
+        for t in (0.30, 1.10, 1.90, 2.45):
+            if t > length:
+                continue
+            c = 0
+            while (0.25 + c) * pitch_m <= ROOF_HL * 2:
+                across = (0.25 + c) * pitch_m
+                at = crest + along * t + np.array([0.0, 0.0, side * (ROOF_HL - across)])
+                m.cyl(tuple(at + n * 0.003), 0.010, 0.010, 0.002, 8, ZINC, slope_rot(side))
+                c += 3
 
     # fascia and barge boards
     eave_y = roof_underside(EAVE_X)
@@ -427,8 +452,8 @@ def build_roof(m):
             continue
         z0, z1 = max(z0, -HL), min(z1, HL)
         for side in (-1, 1):
-            h_in = roof_underside(HW) + (RAFTER_D + PURLIN_T) / math.cos(PITCH) - 0.008 - WALL_H
-            h_out = roof_underside(HW + STUD_D) + (RAFTER_D + PURLIN_T) / math.cos(PITCH) - 0.008 - WALL_H
+            h_in = roof_underside(HW) + (RAFTER_D + PURLIN_T) / math.cos(PITCH) - WALL_H
+            h_out = roof_underside(HW + STUD_D) + (RAFTER_D + PURLIN_T) / math.cos(PITCH) - WALL_H
             xa, xb = side * HW, side * (HW + STUD_D)
             m.quad((xa, WALL_H, z0), (xb, WALL_H, z0), (xb, WALL_H + h_out, z0), (xa, WALL_H + h_in, z0), PINE)
             m.quad((xa, WALL_H, z1), (xa, WALL_H + h_in, z1), (xb, WALL_H + h_out, z1), (xb, WALL_H, z1), PINE)
@@ -451,6 +476,18 @@ def build_door(m):
 
     # leaf
     leaf_z = -WALL_T + 0.0225 + 0.025
+
+    # The keep on the latch jamb - the staple the rim lock's bolt shoots into.
+    # Mirrors OpeningsBuilder: without it the lock fastened to nothing.
+    keep_x = half_rough - jamb
+    keep_y = D["DoorHandleHeight"] + 0.006
+    keep_z = leaf_z + 0.042
+    m.box((keep_x - 0.007, keep_y, keep_z), (0.014, 0.072, 0.044), ZINC)
+    m.box((keep_x - 0.019, keep_y, keep_z), (0.010, 0.030, 0.030), ZINC)
+    for sy in (-1, 1):
+        m.cyl((keep_x - 0.001, keep_y + sy * 0.026, keep_z), 0.0052, 0.0040, 0.004, 10,
+              STEEL, rot_euler(0, 0, 90))
+
     m.push((0.0, 0.0, leaf_z))
     w, h = D["DoorLeafWidth"], D["DoorLeafHeight"]
     for i in range(6):

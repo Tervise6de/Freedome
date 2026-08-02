@@ -19,6 +19,53 @@ namespace Freedome.Tests.EditMode
         // clear of the wall lining.
         private const float WallClearance = 0.12f;
 
+        /// <summary>
+        /// What is in a drawer has to be in the drawer: on the bottom board rather
+        /// than through it, and inside the sides rather than sticking out of them.
+        ///
+        /// Both of these failed before this test existed. The screwdriver's handle
+        /// was buried 7 mm into the drawer bottom and the folding rule floated 6 mm
+        /// above it, and neither is visible until somebody pulls the drawer open -
+        /// by which point they have already levered it with a piece of timber to get
+        /// there.
+        /// </summary>
+        [Test]
+        public void ThingsInDrawersSitOnTheDrawerBottom()
+        {
+            float boardTop = -(FixturesBuilder.DrawerBoxHeight * 0.5f) +
+                             (FixturesBuilder.DrawerBottomThickness * 0.5f);
+
+            foreach (FixturesBuilder.DrawerItem item in FixturesBuilder.DrawerContents)
+            {
+                float underside = item.Centre.y - item.HalfSize.y;
+
+                Assert.AreEqual(boardTop, underside, 0.0005f,
+                    $"the {item.Name} rests {(underside - boardTop) * 1000f:0.0} mm from the " +
+                    "drawer bottom - negative is buried in it, positive is floating over it");
+            }
+        }
+
+        [Test]
+        public void ThingsInDrawersFitInsideThem()
+        {
+            foreach (FixturesBuilder.DrawerItem item in FixturesBuilder.DrawerContents)
+            {
+                Assert.Less(Mathf.Abs(item.Centre.z) + item.HalfSize.z,
+                    FixturesBuilder.DrawerInnerWidth * 0.5f,
+                    $"the {item.Name} passes through the side of the drawer");
+
+                Assert.Greater(item.Centre.x - item.HalfSize.x, 0.012f,
+                    $"the {item.Name} pokes out through the drawer front");
+
+                Assert.Less(item.Centre.x + item.HalfSize.x,
+                    FixturesBuilder.DrawerBoxMidX + (FixturesBuilder.DrawerBoxDepth * 0.5f),
+                    $"the {item.Name} passes through the back of the drawer");
+
+                Assert.Less(item.HalfSize.y * 2f, FixturesBuilder.DrawerBoxHeight,
+                    $"the {item.Name} is taller than the drawer it is in");
+            }
+        }
+
         [Test]
         public void CarryablesStartInsideTheRoom()
         {

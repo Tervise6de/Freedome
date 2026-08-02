@@ -81,7 +81,29 @@ namespace Freedome.EditorTools.Generation
                           new Vector3(Dim.DoorRoughWidth + (Dim.DoorTrimWidth * 2f) - 0.04f,
                                       Dim.DoorTrimWidth, Dim.DoorTrimThickness), 0, 0.003f);
 
-            ctx.CreateObject("Door_Lining", lining, new[] { Keys.StructuralPine, Keys.StructuralPine },
+            // The keep: the staple the rim lock's bolt shoots into, screwed to the
+            // reveal of the latch jamb at the height of the case. Without it the
+            // lock was a box on a door that fastened to nothing, which is the sort
+            // of thing you only notice once you have stood in front of it trying to
+            // get out. It clears the leaf because it sits on the room side of the
+            // boards, past where the leaf swings.
+            const int LiningMetal = 1;
+            float keepX = jambCentreX - (jamb * 0.5f);
+            float keepY = Dim.DoorHandleHeight + 0.006f;
+            float keepZ = DoorLeafClosedZ + 0.042f;
+
+            lining.AddBox(new Vector3(keepX - 0.007f, keepY, keepZ),
+                          new Vector3(0.014f, 0.072f, 0.044f), LiningMetal, 0.002f);
+            lining.AddBox(new Vector3(keepX - 0.019f, keepY, keepZ),
+                          new Vector3(0.010f, 0.030f, 0.030f), LiningMetal, 0.002f);
+            foreach (int sy in new[] { -1, 1 })
+            {
+                lining.AddCylinder(new Vector3(keepX - 0.001f, keepY + (sy * 0.026f), keepZ),
+                                   0.0052f, 0.0040f, 0.004f, 10, LiningMetal,
+                                   Quaternion.Euler(0f, 0f, 90f));
+            }
+
+            ctx.CreateObject("Door_Lining", lining, new[] { Keys.StructuralPine, Keys.Hardware },
                 parent, new Vector3(Dim.DoorCentreX, 0f, -Dim.HalfLength),
                 Quaternion.identity, BuildContext.ColliderKind.Mesh);
 
@@ -242,7 +264,7 @@ namespace Freedome.EditorTools.Generation
                 HingedPart part = hinge.AddComponent<HingedPart>();
                 // Held by the rim lock until its case comes off the inside face.
                 part.Gate(true, false, "The rim lock is fast - no key");
-                BuildRimLockFixture(leaf.transform);
+                BuildRimLockFixture(ctx, leaf.transform);
                 part.Configure("Open the door", "Close the door", Vector3.up,
                                DoorOpenAngleDegrees, 150f,
                                blockerGo != null ? blockerGo.GetComponent<Collider>() : null);
@@ -263,7 +285,7 @@ namespace Freedome.EditorTools.Generation
         /// this true; it is where BuildDoorHardware has drawn the case since the
         /// environment milestone.
         /// </summary>
-        private static void BuildRimLockFixture(Transform leaf)
+        private static void BuildRimLockFixture(BuildContext ctx, Transform leaf)
         {
             GameObject go = new GameObject("Door_RimLockCase");
             go.transform.SetParent(leaf, false);
@@ -281,6 +303,56 @@ namespace Freedome.EditorTools.Generation
                               "Take the lock case off",
                               "The lock case is off",
                               ToolGatedFixture.Effect.RemoveLock);
+
+            // The case is its own object, not part of the leaf mesh, so that taking
+            // it off can actually take it off. Unscrewing a lock and watching it stay
+            // screwed to the door was the one place in the route where doing the
+            // right thing changed nothing you could see.
+            GameObject shell = ctx.CreateObject("Door_RimLockShell", BuildRimLockMesh(),
+                new[] { Keys.Hardware }, go.transform, Vector3.zero, Quaternion.identity,
+                BuildContext.ColliderKind.None, isStatic: false);
+
+            if (shell != null)
+            {
+                BuildContext.MarkMovable(shell);
+                fixture.Removes(shell);
+            }
+        }
+
+        /// <summary>
+        /// The case, its lever, escutcheon and four fixing screws, in the case's own
+        /// local frame. Everything here is on the room side of the leaf, which is
+        /// what a rim lock is.
+        /// </summary>
+        private static MeshBuilder BuildRimLockMesh()
+        {
+            MeshBuilder mb = new MeshBuilder("Door_RimLockShell", 1);
+
+            mb.AddBox(Vector3.zero, RimLockCaseSize, 0, 0.004f);
+
+            // Spindle and lever.
+            mb.AddCylinder(new Vector3(0f, 0f, 0.023f), 0.0165f, 0.0165f, 0.014f, 14, 0,
+                           Quaternion.Euler(90f, 0f, 0f));
+            mb.AddBox(new Vector3(-0.048f, 0f, 0.033f), new Vector3(0.105f, 0.020f, 0.018f),
+                      0, 0.004f);
+
+            // Four countersunk fixing screws, one near each corner of the case. A
+            // player who cannot see fixings has no reason to think the case comes off.
+            foreach (int sx in new[] { -1, 1 })
+            {
+                foreach (int sy in new[] { -1, 1 })
+                {
+                    mb.AddCylinder(new Vector3(sx * 0.042f, sy * 0.056f, 0.019f),
+                                   0.0055f, 0.0042f, 0.004f, 10, 0,
+                                   Quaternion.Euler(90f, 0f, 0f));
+                }
+            }
+
+            // Keyhole escutcheon below the lever.
+            mb.AddCylinder(new Vector3(0f, -0.052f, 0.021f), 0.011f, 0.011f, 0.005f, 12, 0,
+                           Quaternion.Euler(90f, 0f, 0f));
+
+            return mb;
         }
 
         private static void BuildDoorHardware(MeshBuilder mb, float halfW, float bottomGap,
@@ -290,34 +362,10 @@ namespace Freedome.EditorTools.Generation
             float latchX = halfW - 0.075f;
             float y = Dim.DoorHandleHeight + bottomGap;
 
-            // Rim lock case on the inside face.
-            mb.AddBox(new Vector3(latchX, y, ledgeThickness + 0.019f),
-                      new Vector3(0.115f, 0.145f, 0.038f), Metal, 0.004f);
-
-            // Spindle and lever.
-            mb.AddCylinder(new Vector3(latchX, y, ledgeThickness + 0.042f),
-                           0.0165f, 0.0165f, 0.014f, 14, Metal, Quaternion.Euler(90f, 0f, 0f));
-            mb.AddBox(new Vector3(latchX - 0.048f, y, ledgeThickness + 0.052f),
-                      new Vector3(0.105f, 0.020f, 0.018f), Metal, 0.004f);
-
-            // Four countersunk fixing screws, one near each corner of the case.
-            // The case has always been a separate box on the inside face; what was
-            // missing was any sign of how it is held there. A player who cannot see
-            // fixings has no reason to think the case comes off.
-            foreach (int sx in new[] { -1, 1 })
-            {
-                foreach (int sy in new[] { -1, 1 })
-                {
-                    mb.AddCylinder(new Vector3(latchX + (sx * 0.042f), y + (sy * 0.056f),
-                                               ledgeThickness + 0.038f),
-                                   0.0055f, 0.0042f, 0.004f, 10, Metal,
-                                   Quaternion.Euler(90f, 0f, 0f));
-                }
-            }
-
-            // Keyhole escutcheon below the lever.
-            mb.AddCylinder(new Vector3(latchX, y - 0.052f, ledgeThickness + 0.040f),
-                           0.011f, 0.011f, 0.005f, 12, Metal, Quaternion.Euler(90f, 0f, 0f));
+            // The rim lock case, its lever, escutcheon and fixing screws are not
+            // here: they are their own object under Door_RimLockCase, because the
+            // one thing that has to happen when you unscrew them is that they stop
+            // being on the door. See BuildRimLockMesh.
 
             // Striking plate side of the latch, poking out of the leaf edge.
             mb.AddBox(new Vector3(halfW + 0.006f, y, ledgeThickness * 0.5f),
