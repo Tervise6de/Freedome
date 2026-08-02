@@ -1018,26 +1018,88 @@ def build_entrance_fittings(m):
 
 
 def build_props(m):
-    # lawnmower
+    # Lawnmower. Mirrors PropsBuilder: handle tubes that actually join the deck
+    # to the grips (they used to lean the wrong way and touch neither), cooling
+    # fins, muffler, plug lead, a filler cap you can see is a cap, a recoil
+    # housing and a starter cord with a grip on the end of it.
     m.push((1.10, 0.0, -1.55), rot_euler(0, 8, 0))
     wr = 0.09
     dy = wr + 0.045
     m.box((0.0, dy, 0.0), (0.50, 0.115, 0.44), GREEN)
+    m.box((0.0, dy - 0.062, 0.0), (0.47, 0.030, 0.41), GREEN)
+    m.box((0.0, dy + 0.058, -0.12), (0.38, 0.012, 0.045), GREEN)
     for sx in (-1, 1):
         for sz in (-1, 1):
             hub = (sx * 0.27, wr, sz * 0.167)
             m.cyl(hub, wr, wr, 0.045, 12, RUBBER, rot_euler(0, 0, 90))
             m.cyl(hub, wr * 0.42, wr * 0.42, 0.05, 8, EPLAST, rot_euler(0, 0, 90))
+            for i in range(8):
+                a = i * math.pi * 2 / 8
+                m.box((hub[0], hub[1] + math.cos(a) * wr, hub[2] + math.sin(a) * wr),
+                      (0.047, 0.010, 0.022), RUBBER, rot_euler(math.degrees(a), 0, 0))
+            m.box((hub[0] + sx * 0.028, hub[1] + 0.052, hub[2] + sz * 0.030),
+                  (0.012, 0.090, 0.016), STEEL, rot_euler(sz * 22, 0, 0))
+
+    # Engine: crankcase, fins, plug, muffler, tank, filler cap, filter, recoil.
     m.box((0.0, dy + 0.135, 0.015), (0.235, 0.155, 0.23), STEEL)
+    for i in range(5):
+        m.box((0.128, dy + 0.108 + i * 0.022, 0.020), (0.070, 0.008, 0.180), STEEL)
+    m.cyl((0.168, dy + 0.150, -0.062), 0.010, 0.010, 0.040, 8, STEEL, rot_euler(0, 0, 90))
+    m.cyl((0.196, dy + 0.150, -0.062), 0.016, 0.014, 0.030, 8, EPLAST, rot_euler(0, 0, 90))
+    m.cyl((0.100, dy + 0.070, -0.150), 0.038, 0.038, 0.110, 10, STEEL, rot_euler(0, 0, 90))
+    m.box((0.100, dy + 0.108, -0.150), (0.125, 0.010, 0.086), STEEL)
     m.box((0.0, dy + 0.235, 0.01), (0.215, 0.07, 0.20), GREEN)
-    m.cyl((0.135, dy + 0.14, 0.02), 0.062, 0.062, 0.055, 12, STEEL, rot_euler(0, 0, 90))
+    cap = (-0.055, dy + 0.288, 0.010)
+    m.cyl((cap[0], cap[1] - 0.014, cap[2]), 0.030, 0.030, 0.014, 12, GREEN)
+    m.cyl(cap, 0.026, 0.024, 0.018, 12, EPLAST)
     m.box((-0.14, dy + 0.15, 0.02), (0.06, 0.085, 0.12), EPLAST)
+    m.cyl((0.0, dy + 0.135, -0.108), 0.082, 0.082, 0.028, 14, STEEL, rot_euler(90, 0, 0))
+    m.cyl((0.0, dy + 0.135, -0.124), 0.030, 0.030, 0.010, 10, STEEL, rot_euler(90, 0, 0))
+    m.cyl((0.052, dy + 0.168, -0.126), 0.009, 0.009, 0.014, 8, EPLAST, rot_euler(90, 0, 0))
+
     m.box((0.23, dy - 0.01, -0.13), (0.12, 0.09, 0.15), GREEN, rot_euler(0, 34, 0))
+
+    # Handle. foot -> grip, with the lean derived rather than guessed.
+    foot = (0.215, dy + 0.020, -0.44 / 2 + 0.030)
+    grip = (0.215, 1.010, -0.760)
+    run = (0.0, grip[1] - foot[1], grip[2] - foot[2])
+    tube_len = math.hypot(run[1], run[2])
+    lean = -math.degrees(math.atan2(-run[2], run[1]))
     for sx in (-1, 1):
-        m.cyl((sx * 0.215, dy + 0.29, -0.47), 0.014, 0.014, 0.98, 8, STEEL, rot_euler(52, 0, 0))
-    m.cyl((0.0, 1.01, -0.76), 0.014, 0.014, 0.43, 8, STEEL, rot_euler(0, 0, 90))
+        m.cyl((sx * foot[0], (foot[1] + grip[1]) / 2, (foot[2] + grip[2]) / 2),
+              0.014, 0.014, tube_len, 8, STEEL, rot_euler(lean, 0, 0))
+        m.box((sx * foot[0], foot[1], foot[2]), (0.034, 0.055, 0.030), STEEL)
+    m.cyl((0.0, grip[1], grip[2]), 0.014, 0.014, grip[0] * 2, 8, STEEL, rot_euler(0, 0, 90))
     for sx in (-1, 1):
-        m.cyl((sx * 0.17, 1.01, -0.76), 0.019, 0.019, 0.10, 8, EPLAST, rot_euler(0, 0, 90))
+        m.cyl((sx * (grip[0] - 0.045), grip[1], grip[2]), 0.019, 0.019, 0.10, 8, EPLAST,
+              rot_euler(0, 0, 90))
+    m.cyl((0.0, grip[1] - 0.052, grip[2] + 0.030), 0.008, 0.008, grip[0] * 1.9, 8, STEEL,
+          rot_euler(0, 0, 90))
+    for sx in (-1, 1):
+        m.cyl((sx * grip[0], grip[1] - 0.026, grip[2] + 0.015), 0.006, 0.006, 0.062, 6, STEEL,
+              rot_euler(-30, 0, 0))
+
+    # Starter cord out of the housing, up to its T-grip on the right tube.
+    sgrip = (0.215, 0.700, -0.395)
+    housing = (0.052, dy + 0.168, -0.132)
+    guide = (sgrip[0] - 0.010, sgrip[1] + 0.055, sgrip[2] + 0.020)
+    cord = [guide[i] - housing[i] for i in range(3)]
+    clen = math.sqrt(sum(c * c for c in cord))
+    m.cyl(tuple(housing[i] + cord[i] / 2 for i in range(3)), 0.0035, 0.0035, clen, 6, EPLAST,
+          rot_from_to((0.0, 1.0, 0.0), tuple(c / clen for c in cord)))
+    m.cyl(sgrip, 0.014, 0.014, 0.085, 8, EPLAST, rot_euler(0, 0, 90))
+    m.cyl((sgrip[0], sgrip[1] + 0.026, sgrip[2]), 0.007, 0.007, 0.050, 6, EPLAST)
+    m.pop()
+
+    # Can of petrol, against the entrance wall by the mower.
+    m.push((1.62, 0.0, -2.30))
+    m.box((0.0, 0.145, 0.0), (0.170, 0.290, 0.130), RED)
+    for sz in (-1, 1):
+        m.box((0.0, 0.133, sz * 0.065), (0.120, 0.160, 0.012), RED)
+    m.box((0.0, 0.316, 0.0), (0.110, 0.018, 0.030), RED)
+    m.cyl((0.0, 0.300, -0.042), 0.026, 0.026, 0.030, 12, RED)
+    m.cyl((0.0, 0.322, -0.042), 0.028, 0.026, 0.018, 12, EPLAST)
+    m.cyl((0.099, 0.160, 0.030), 0.014, 0.010, 0.230, 8, EPLAST, rot_euler(14, 0, 6))
     m.pop()
 
     # wheelbarrow

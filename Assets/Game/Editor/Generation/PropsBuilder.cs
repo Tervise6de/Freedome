@@ -1,4 +1,5 @@
 using UnityEngine;
+using Freedome.Interaction;
 using Dim = Freedome.Environment.ShedDimensions;
 using Keys = Freedome.EditorTools.Generation.ShedMaterialLibrary.Keys;
 
@@ -216,76 +217,262 @@ namespace Freedome.EditorTools.Generation
         // Floor objects
         // =====================================================================
 
+        // =====================================================================
+        // Lawnmower
+        //
+        // Sizes kept as properties rather than locals because the handle has to
+        // actually reach the grips, and the fuel cap and the recoil starter each
+        // need a collider in the same place as the part they represent. The first
+        // version of this had none of that: the handle tubes were rotated the wrong
+        // way about X, so each one ran from a point 856 mm behind the machine on the
+        // floor up to a point over the deck - passing through neither the mower nor
+        // the cross grip they were supposed to join.
+        // =====================================================================
+
+        public const float MowerDeckWidth = 0.500f;
+        public const float MowerDeckDepth = 0.440f;
+        public const float MowerWheelRadius = 0.090f;
+
+        public static float MowerDeckY => MowerWheelRadius + 0.045f;
+
+        /// <summary>Where a handle tube leaves the deck, on the +x side.</summary>
+        public static Vector3 MowerHandleFoot =>
+            new Vector3(0.215f, MowerDeckY + 0.020f, -(MowerDeckDepth * 0.5f) + 0.030f);
+
+        /// <summary>Where the same tube meets the cross grip.</summary>
+        public static Vector3 MowerHandleGrip => new Vector3(0.215f, 1.010f, -0.760f);
+
+        /// <summary>Local position of the mower in the room.</summary>
+        public static Vector3 MowerOrigin => new Vector3(1.100f, 0f, -1.550f);
+
+        public const float MowerYaw = 8f;
+
+        /// <summary>Filler cap, on top of the tank. The player reaches for this.</summary>
+        public static Vector3 MowerFillerCap =>
+            new Vector3(-0.055f, MowerDeckY + 0.288f, 0.010f);
+
+        /// <summary>The recoil starter grip, parked in its guide on the handle.</summary>
+        public static Vector3 MowerStarterGrip =>
+            new Vector3(0.215f, 0.700f, -0.395f);
+
         /// <summary>
         /// A petrol push mower. Roughly 0.5 m wide over the deck and 1.0 m to the
         /// handle grips, which is what makes it read at the right size next to a
         /// person.
+        ///
+        /// It is its own object because it can be started, and a running engine
+        /// shakes. Nothing about the way out goes through it.
         /// </summary>
         private static void BuildLawnmower(BuildContext ctx, Transform parent)
         {
             // 0 painted green, 1 dark steel, 2 rubber, 3 plastic
             MeshBuilder mb = new MeshBuilder("Lawnmower", 4);
 
-            const float DeckW = 0.500f;
-            const float DeckD = 0.440f;
-            const float WheelR = 0.090f;
-            float deckY = WheelR + 0.045f;
+            float deckW = MowerDeckWidth;
+            float deckD = MowerDeckDepth;
+            float wheelR = MowerWheelRadius;
+            float deckY = MowerDeckY;
 
-            // Deck with a rolled edge.
-            mb.AddBox(new Vector3(0f, deckY, 0f), new Vector3(DeckW, 0.115f, DeckD), 0, 0.014f);
-            mb.AddBox(new Vector3(0f, deckY - 0.062f, 0f), new Vector3(DeckW - 0.030f, 0.030f, DeckD - 0.030f),
-                      0, 0.008f);
+            // Deck with a rolled edge and a pressed rib across it.
+            mb.AddBox(new Vector3(0f, deckY, 0f), new Vector3(deckW, 0.115f, deckD), 0, 0.014f);
+            mb.AddBox(new Vector3(0f, deckY - 0.062f, 0f),
+                      new Vector3(deckW - 0.030f, 0.030f, deckD - 0.030f), 0, 0.008f);
+            mb.AddBox(new Vector3(0f, deckY + 0.058f, -0.120f),
+                      new Vector3(deckW - 0.120f, 0.012f, 0.045f), 0, 0.006f);
 
-            // Wheels and their axles.
+            // Wheels: tyre, hub, and four tread lugs so the rim is not a smooth
+            // cylinder at the one height the player's eye passes it.
             foreach (int sx in new[] { -1, 1 })
             {
                 foreach (int sz in new[] { -1, 1 })
                 {
-                    Vector3 hub = new Vector3(sx * ((DeckW * 0.5f) + 0.020f), WheelR, sz * (DeckD * 0.38f));
-                    mb.AddCylinder(hub, WheelR, WheelR, 0.045f, 14, 2, Quaternion.Euler(0f, 0f, 90f));
-                    mb.AddCylinder(hub, WheelR * 0.42f, WheelR * 0.42f, 0.050f, 10, 3,
+                    Vector3 hub = new Vector3(sx * ((deckW * 0.5f) + 0.020f), wheelR,
+                                              sz * (deckD * 0.38f));
+                    mb.AddCylinder(hub, wheelR, wheelR, 0.045f, 14, 2, Quaternion.Euler(0f, 0f, 90f));
+                    mb.AddCylinder(hub, wheelR * 0.42f, wheelR * 0.42f, 0.050f, 10, 3,
                                    Quaternion.Euler(0f, 0f, 90f));
+
+                    for (int i = 0; i < 8; i++)
+                    {
+                        float a = i * Mathf.PI * 2f / 8f;
+                        mb.AddBox(hub + new Vector3(0f, Mathf.Cos(a) * wheelR, Mathf.Sin(a) * wheelR),
+                                  new Vector3(0.047f, 0.010f, 0.022f),
+                                  Quaternion.Euler(a * Mathf.Rad2Deg, 0f, 0f), 2, 0.002f);
+                    }
+
+                    // Height-adjust lever, one per wheel, with its quadrant.
+                    mb.AddBox(hub + new Vector3(sx * 0.028f, 0.052f, sz * 0.030f),
+                              new Vector3(0.012f, 0.090f, 0.016f),
+                              Quaternion.Euler(sz * 22f, 0f, 0f), 1, 0.003f);
                 }
             }
 
-            // Engine, fuel tank, air filter and recoil starter.
-            mb.AddBox(new Vector3(0f, deckY + 0.135f, 0.015f), new Vector3(0.235f, 0.155f, 0.230f), 1, 0.010f);
-            mb.AddBox(new Vector3(0f, deckY + 0.235f, 0.010f), new Vector3(0.215f, 0.070f, 0.200f), 0, 0.012f);
-            mb.AddCylinder(new Vector3(0.135f, deckY + 0.140f, 0.020f), 0.062f, 0.062f, 0.055f, 14, 1,
-                           Quaternion.Euler(0f, 0f, 90f));
-            mb.AddBox(new Vector3(-0.140f, deckY + 0.150f, 0.020f), new Vector3(0.060f, 0.085f, 0.120f), 3,
-                      0.008f);
-            mb.AddCylinder(new Vector3(0.030f, deckY + 0.150f, -0.135f), 0.016f, 0.016f, 0.045f, 8, 3,
-                           Quaternion.Euler(90f, 0f, 0f));
+            BuildMowerEngineBlock(mb, deckY);
 
             // Discharge chute.
-            mb.AddBox(new Vector3(0.230f, deckY - 0.010f, -0.130f), new Vector3(0.120f, 0.090f, 0.150f),
+            mb.AddBox(new Vector3(0.230f, deckY - 0.010f, -0.130f),
+                      new Vector3(0.120f, 0.090f, 0.150f),
                       Quaternion.Euler(0f, 34f, 0f), 0, 0.010f);
 
-            // Handle: two tubes and a cross grip.
-            const float HandleAngle = 52f;
+            BuildMowerHandle(mb, deckY);
+
+            GameObject mower = ctx.CreateObject("Lawnmower", mb,
+                new[] { Keys.PaintedGreen, Keys.DarkSteel, Keys.Rubber, Keys.ElectricalPlastic },
+                parent, MowerOrigin, Quaternion.Euler(0f, MowerYaw, 0f),
+                BuildContext.ColliderKind.Box, isStatic: false);
+
+            if (mower == null)
+            {
+                return;
+            }
+
+            BuildContext.MarkMovable(mower);
+
+            MowerEngine engine = mower.AddComponent<MowerEngine>();
+
+            AddMowerControl(mower.transform, "Mower_FillerCap", MowerFillerCap,
+                            new Vector3(0.130f, 0.090f, 0.130f),
+                            MowerControl.Role.FillerCap, engine);
+            AddMowerControl(mower.transform, "Mower_Starter", MowerStarterGrip,
+                            new Vector3(0.120f, 0.130f, 0.130f),
+                            MowerControl.Role.Starter, engine);
+        }
+
+        private static void AddMowerControl(Transform mower, string name, Vector3 at, Vector3 size,
+                                            MowerControl.Role role, MowerEngine engine)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(mower, false);
+            go.transform.localPosition = at;
+            BuildContext.MarkMovable(go);
+
+            BoxCollider reach = go.AddComponent<BoxCollider>();
+            reach.size = size;
+
+            go.AddComponent<MowerControl>().Configure(role, engine, "petrol");
+        }
+
+        /// <summary>
+        /// Engine, tank, filler cap, muffler, air filter and recoil housing.
+        ///
+        /// The engine was a plain box with a 32 mm cylinder stuck on the back of it
+        /// standing in for a recoil starter. A small four-stroke is mostly fins, a
+        /// muffler and a plug lead, and those are what say petrol rather than
+        /// electric from two metres away.
+        /// </summary>
+        private static void BuildMowerEngineBlock(MeshBuilder mb, float deckY)
+        {
+            const int Steel = 1;
+            const int Green = 0;
+            const int Plastic = 3;
+
+            // Crankcase.
+            mb.AddBox(new Vector3(0f, deckY + 0.135f, 0.015f),
+                      new Vector3(0.235f, 0.155f, 0.230f), Steel, 0.010f);
+
+            // Cylinder cooling fins, stacked up the barrel.
+            for (int i = 0; i < 5; i++)
+            {
+                mb.AddBox(new Vector3(0.128f, deckY + 0.108f + (i * 0.022f), 0.020f),
+                          new Vector3(0.070f, 0.008f, 0.180f), Steel, 0.002f);
+            }
+
+            // Spark plug and its lead boot, on the fin stack.
+            mb.AddCylinder(new Vector3(0.168f, deckY + 0.150f, -0.062f), 0.010f, 0.010f, 0.040f, 8,
+                           Steel, Quaternion.Euler(0f, 0f, 90f));
+            mb.AddCylinder(new Vector3(0.196f, deckY + 0.150f, -0.062f), 0.016f, 0.014f, 0.030f, 8,
+                           Plastic, Quaternion.Euler(0f, 0f, 90f));
+
+            // Muffler with a perforated heat shield over it.
+            mb.AddCylinder(new Vector3(0.100f, deckY + 0.070f, -0.150f), 0.038f, 0.038f, 0.110f, 10,
+                           Steel, Quaternion.Euler(0f, 0f, 90f));
+            mb.AddBox(new Vector3(0.100f, deckY + 0.108f, -0.150f),
+                      new Vector3(0.125f, 0.010f, 0.086f), Steel, 0.004f);
+
+            // Tank, sitting on the crankcase, with a filler cap you can see is a cap.
+            mb.AddBox(new Vector3(0f, deckY + 0.235f, 0.010f),
+                      new Vector3(0.215f, 0.070f, 0.200f), Green, 0.012f);
+            mb.AddCylinder(MowerFillerCap + new Vector3(0f, -0.014f, 0f), 0.030f, 0.030f, 0.014f, 12,
+                           Green, Quaternion.identity);
+            mb.AddCylinder(MowerFillerCap, 0.026f, 0.024f, 0.018f, 12, Plastic, Quaternion.identity);
+
+            // Air filter housing.
+            mb.AddBox(new Vector3(-0.140f, deckY + 0.150f, 0.020f),
+                      new Vector3(0.060f, 0.085f, 0.120f), Plastic, 0.008f);
+
+            // Recoil starter: a dished housing on the flywheel end, facing the
+            // operator, with the rope leaving it through a guide.
+            mb.AddCylinder(new Vector3(0f, deckY + 0.135f, -0.108f), 0.082f, 0.082f, 0.028f, 16,
+                           Steel, Quaternion.Euler(90f, 0f, 0f));
+            mb.AddCylinder(new Vector3(0f, deckY + 0.135f, -0.124f), 0.030f, 0.030f, 0.010f, 10,
+                           Steel, Quaternion.Euler(90f, 0f, 0f));
+            mb.AddCylinder(new Vector3(0.052f, deckY + 0.168f, -0.126f), 0.009f, 0.009f, 0.014f, 8,
+                           Plastic, Quaternion.Euler(90f, 0f, 0f));
+        }
+
+        /// <summary>
+        /// Handlebar, bail lever, and the starter cord running from the recoil
+        /// housing up to its grip.
+        /// </summary>
+        private static void BuildMowerHandle(MeshBuilder mb, float deckY)
+        {
+            const int Steel = 1;
+            const int Plastic = 3;
+
+            Vector3 foot = MowerHandleFoot;
+            Vector3 grip = MowerHandleGrip;
+
+            Vector3 run = grip - foot;
+            float tubeLength = run.magnitude;
+            // Rotation about X takes +Y toward +Z, so a tube leaning back toward the
+            // operator is a negative angle. Getting this sign wrong is what left the
+            // original handle pointing forwards over the deck.
+            float lean = -Mathf.Atan2(-run.z, run.y) * Mathf.Rad2Deg;
+
             foreach (int sx in new[] { -1, 1 })
             {
-                mb.AddCylinder(new Vector3(sx * 0.215f, deckY + 0.290f, -0.470f),
-                               0.014f, 0.014f, 0.980f, 8, 1,
-                               Quaternion.Euler(HandleAngle, 0f, 0f));
+                Vector3 centre = new Vector3(sx * foot.x, (foot.y + grip.y) * 0.5f,
+                                             (foot.z + grip.z) * 0.5f);
+                mb.AddCylinder(centre, 0.014f, 0.014f, tubeLength, 8, Steel,
+                               Quaternion.Euler(lean, 0f, 0f));
+
+                // Bracket bolting the tube to the deck.
+                mb.AddBox(new Vector3(sx * foot.x, foot.y, foot.z),
+                          new Vector3(0.034f, 0.055f, 0.030f), Steel, 0.004f);
             }
-            mb.AddCylinder(new Vector3(0f, 1.010f, -0.760f), 0.014f, 0.014f, 0.430f, 8, 1,
+
+            // Cross grip and its two hand grips.
+            mb.AddCylinder(new Vector3(0f, grip.y, grip.z), 0.014f, 0.014f, grip.x * 2f, 8, Steel,
                            Quaternion.Euler(0f, 0f, 90f));
             foreach (int sx in new[] { -1, 1 })
             {
-                mb.AddCylinder(new Vector3(sx * 0.170f, 1.010f, -0.760f), 0.019f, 0.019f, 0.100f, 10, 3,
-                               Quaternion.Euler(0f, 0f, 90f));
+                mb.AddCylinder(new Vector3(sx * (grip.x - 0.045f), grip.y, grip.z),
+                               0.019f, 0.019f, 0.100f, 10, Plastic, Quaternion.Euler(0f, 0f, 90f));
             }
 
-            // Starter cord looped back to the handle.
-            mb.AddCylinder(new Vector3(0.030f, deckY + 0.400f, -0.290f), 0.003f, 0.003f, 0.560f, 6, 3,
-                           Quaternion.Euler(28f, 0f, -3f));
+            // Bail lever, hinged below the cross grip and held a little off it.
+            mb.AddCylinder(new Vector3(0f, grip.y - 0.052f, grip.z + 0.030f),
+                           0.008f, 0.008f, grip.x * 1.9f, 8, Steel, Quaternion.Euler(0f, 0f, 90f));
+            foreach (int sx in new[] { -1, 1 })
+            {
+                mb.AddCylinder(new Vector3(sx * grip.x, grip.y - 0.026f, grip.z + 0.015f),
+                               0.006f, 0.006f, 0.062f, 6, Steel, Quaternion.Euler(-30f, 0f, 0f));
+            }
 
-            ctx.CreateObject("Lawnmower", mb,
-                new[] { Keys.PaintedGreen, Keys.DarkSteel, Keys.Rubber, Keys.ElectricalPlastic },
-                parent, new Vector3(1.100f, 0f, -1.550f), Quaternion.Euler(0f, 8f, 0f),
-                BuildContext.ColliderKind.Box);
+            // Starter cord: out of the recoil housing, up through a guide on the
+            // right-hand tube, and its grip parked where you would leave it.
+            Vector3 housing = new Vector3(0.052f, deckY + 0.168f, -0.132f);
+            Vector3 guide = MowerStarterGrip + new Vector3(-0.010f, 0.055f, 0.020f);
+            Vector3 cord = guide - housing;
+
+            mb.AddCylinder(housing + (cord * 0.5f), 0.0035f, 0.0035f, cord.magnitude, 6, Plastic,
+                           Quaternion.FromToRotation(Vector3.up, cord.normalized));
+
+            // The T-grip.
+            mb.AddCylinder(MowerStarterGrip, 0.014f, 0.014f, 0.085f, 8, Plastic,
+                           Quaternion.Euler(0f, 0f, 90f));
+            mb.AddCylinder(MowerStarterGrip + new Vector3(0f, 0.026f, 0f), 0.007f, 0.007f, 0.050f, 6,
+                           Plastic, Quaternion.identity);
         }
 
         private static void BuildWheelbarrow(BuildContext ctx, Transform parent)

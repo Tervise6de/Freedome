@@ -442,3 +442,27 @@ already contains, and it has the advantage of being possible.
 round on purpose: if somebody later raises the shed on taller piers, the test
 fails and forces a reread of why the route avoids the crawl space, rather than
 quietly passing while the comment goes stale.
+
+
+---
+
+## The mower starts
+
+**Asked for**, and worth writing down because it is the second working machine
+in a project whose scope note says no optional content.
+
+The tank is dry, the can is by the door, and filling it lets the recoil starter
+catch. The engine then runs - vibrating, since there is no audio in this project
+- until the starter is pulled again.
+
+**Why it is not a scope breach.** It is the service panel again. The panel
+unscrews, lifts, and shows you 230 mm of joists and dirt; the mower fuels,
+starts, and mows nothing. Both exist so that the shed is not a building where
+only the useful things work, which is the thing that would tell the player
+exactly where to look. Neither is on the way out and neither can block it.
+
+**Where the line is.** `MowerEngine` is its own component with two booleans. It
+is not part of `EscapeState` and nothing reads it. If a future change makes the
+running engine matter to getting out of the shed - noise that masks something,
+a battery, a fuel line worth cutting - that is a new decision and a second
+route, which this project still does not have.

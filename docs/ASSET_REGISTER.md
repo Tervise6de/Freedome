@@ -181,6 +181,8 @@ third-party content.
 | `Carry_Paintbrush` | inline | StructuralPine, Hardware, PaintedGreen | 50 mm brush, gone hard. In the bench cupboard |
 | `CupboardDoor_0/1` | inline | StructuralPine, Hardware | Split out of the bench mesh so they can open |
 | `Door_RimLockShell` | inline | Hardware | Split out of the door leaf so unscrewing it removes it |
+| `Carry_FuelCan` | inline | PaintedRed, ElectricalPlastic | 5 litre can with a clipped spout, 4.2 kg |
+| `Lawnmower` | inline | PaintedGreen, DarkSteel, Rubber, ElectricalPlastic | Now its own object: it can be fuelled, started, and shakes while running |
 | `LightSwitch_Rocker` | inline box | Hardware | Split out of the shared electrical mesh |
 
 The door leaf and the service panel are not new - they already existed as their

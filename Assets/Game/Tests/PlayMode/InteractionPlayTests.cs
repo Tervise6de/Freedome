@@ -266,5 +266,101 @@ namespace Freedome.Tests.PlayMode
             Assert.IsFalse(reach.enabled,
                 "the finished fixture is still the first thing the interaction ray meets");
         }
+
+        /// <summary>
+        /// The mower starts if there is petrol in it and not otherwise, and pulling
+        /// the cord on a dry engine has to be allowed - finding out it is dry is the
+        /// only thing that would send anyone looking for the can.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMowerOnlyStartsOnceItHasFuel()
+        {
+            GameObject mowerGo = new GameObject("Lawnmower");
+            mowerGo.transform.SetParent(_root.transform, false);
+            MowerEngine engine = mowerGo.AddComponent<MowerEngine>();
+
+            GameObject starterGo = new GameObject("Mower_Starter");
+            starterGo.transform.SetParent(mowerGo.transform, false);
+            MowerControl starter = starterGo.AddComponent<MowerControl>();
+            starter.Configure(MowerControl.Role.Starter, engine, "petrol");
+
+            GameObject capGo = new GameObject("Mower_FillerCap");
+            capGo.transform.SetParent(mowerGo.transform, false);
+            MowerControl cap = capGo.AddComponent<MowerControl>();
+            cap.Configure(MowerControl.Role.FillerCap, engine, "petrol");
+
+            PlayerInteractor interactor = MakeInteractor();
+            yield return null;
+
+            starter.Interact(interactor);
+            yield return null;
+
+            Assert.IsFalse(engine.IsRunning, "a dry engine caught");
+            Assert.AreEqual("The tank is dry", cap.Prompt);
+
+            // Holding the wrong thing must not fill it.
+            Carryable rule = MakeCarryable("folding rule");
+            interactor.TryCarry(rule);
+            yield return null;
+            cap.Interact(interactor);
+            yield return null;
+
+            Assert.IsFalse(engine.HasFuel, "a folding rule filled the tank");
+
+            Carryable can = MakeCarryable("can of petrol");
+            interactor.TryCarry(can);
+            interactor.Inventory.Select(interactor.Inventory.Count - 1);
+            yield return null;
+
+            Assert.AreEqual("Fill the tank", cap.PromptFor(interactor.Carried),
+                "the filler cap does not offer to be filled with the can in hand");
+
+            cap.Interact(interactor);
+            yield return null;
+
+            Assert.IsTrue(engine.HasFuel, "using the can on the filler cap did nothing");
+
+            starter.Interact(interactor);
+            yield return null;
+
+            Assert.IsTrue(engine.IsRunning, "the mower did not start with fuel in it");
+            Assert.AreEqual("Stop the engine", starter.Prompt);
+
+            starter.Interact(interactor);
+            yield return null;
+
+            Assert.IsFalse(engine.IsRunning, "the mower could not be stopped again");
+        }
+
+        [UnityTest]
+        public IEnumerator ARunningMowerShakesAndAStoppedOneSitsStill()
+        {
+            GameObject mowerGo = new GameObject("Lawnmower");
+            mowerGo.transform.SetParent(_root.transform, false);
+            mowerGo.transform.localPosition = new Vector3(1.1f, 0f, -1.55f);
+
+            MowerEngine engine = mowerGo.AddComponent<MowerEngine>();
+            yield return null;
+
+            Vector3 rest = mowerGo.transform.localPosition;
+
+            engine.Fill();
+            Assert.IsTrue(engine.TryStart());
+
+            bool moved = false;
+            for (int i = 0; i < 12 && !moved; i++)
+            {
+                yield return null;
+                moved = Vector3.Distance(mowerGo.transform.localPosition, rest) > 0.0002f;
+            }
+
+            Assert.IsTrue(moved, "a running engine does not move at all");
+
+            engine.Stop();
+            yield return null;
+
+            Assert.AreEqual(rest, mowerGo.transform.localPosition,
+                "a stopped engine did not settle back where it was");
+        }
     }
 }

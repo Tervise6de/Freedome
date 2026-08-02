@@ -50,6 +50,13 @@ The service panel still unscrews and still lifts, and under it is 230 mm of
 joists and dirt. It is a dead end on purpose: a building where only the useful
 things open is a building that tells you which things are useful.
 
+The mower is the second of those. Its tank is dry; there is a can of petrol
+against the entrance wall; fill it and the recoil starter will catch, and the
+engine will sit there running until you stop it. It does nothing. `MowerEngine`
+holds two booleans and is deliberately not part of `EscapeState`, because the
+moment engine state lives in the same object as door state somebody will be
+tempted to wire one to the other.
+
 ### Still not in, and not to be added without asking
 
 countdown timer, game-over, kidnapper AI, dialogue, save system, combat,

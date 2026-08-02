@@ -161,6 +161,17 @@ namespace Freedome.Interaction
                     return text == fixture.Prompt ? text : $"[{useKey}] {text}";
                 }
 
+                // Same shape for the mower: the filler cap states its condition until
+                // you are holding something that can change it.
+                if (_focus is MowerControl control)
+                {
+                    string text = control.PromptFor(_carried);
+                    return text == control.Prompt && text != "Pull the starter" &&
+                           text != "Stop the engine"
+                        ? text
+                        : $"[{useKey}] {text}";
+                }
+
                 // A locked thing states its condition; there is nothing to press.
                 if (_focus is HingedPart hinged && hinged.IsBlocked)
                 {

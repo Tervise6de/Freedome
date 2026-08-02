@@ -74,6 +74,9 @@ namespace Freedome.EditorTools.Generation
                             Base = new Vector3(1.70f, 0f, 0f), InCupboard = true, Along = 0.20f },
             new Placement { Name = "Paintbrush",
                             Base = new Vector3(1.62f, 0f, 0f), InCupboard = true, Along = -0.20f },
+            // Against the entrance wall near the mower, which is where a can of
+            // petrol lives: by the door, and not next to anything warm.
+            new Placement { Name = "FuelCan", Base = new Vector3(1.62f, 0.000f, -2.30f) },
         };
 
         public static void Build(BuildContext ctx, Transform parent)
@@ -94,6 +97,7 @@ namespace Freedome.EditorTools.Generation
                     case "Torch": BuildTorch(ctx, group.transform, p.Position); break;
                     case "NailTin": BuildNailTin(ctx, group.transform, p.Position); break;
                     case "Paintbrush": BuildPaintbrush(ctx, group.transform, p.Position); break;
+                    case "FuelCan": BuildFuelCan(ctx, group.transform, p.Position); break;
                 }
             }
         }
@@ -238,6 +242,49 @@ namespace Freedome.EditorTools.Generation
                    new[] { Keys.StructuralPine, Keys.Hardware, Keys.PaintedGreen },
                    parent, at, "paintbrush", 0.2f,
                    new Vector3(0.22f, -0.18f, 0.36f), Vector3.zero);
+        }
+
+        /// <summary>
+        /// A five-litre plastic petrol can with a flexible spout clipped to its side.
+        ///
+        /// It is here because the mower is here and mowers need petrol, which is the
+        /// same test everything else in this shed had to pass. It is not on the way
+        /// out and nothing marks it: what makes anyone pick it up is having already
+        /// pulled the mower's starter and found out the tank is dry.
+        /// </summary>
+        private static void BuildFuelCan(BuildContext ctx, Transform parent, Vector3 at)
+        {
+            // 0 red body, 1 cap and spout
+            MeshBuilder mb = new MeshBuilder("Carry_FuelCan", 2);
+
+            const float W = 0.170f;
+            const float D = 0.130f;
+            const float H = 0.290f;
+
+            mb.AddBox(new Vector3(0f, H * 0.5f, 0f), new Vector3(W, H, D), 0, 0.018f);
+
+            // The moulded recess that makes a can a can rather than a box.
+            foreach (int sz in new[] { -1, 1 })
+            {
+                mb.AddBox(new Vector3(0f, H * 0.46f, sz * (D * 0.5f)),
+                          new Vector3(W - 0.050f, H * 0.55f, 0.012f), 0, 0.006f);
+            }
+
+            // Carry handle across the top, and the filler neck beside it.
+            mb.AddBox(new Vector3(0f, H + 0.026f, 0f), new Vector3(W - 0.060f, 0.018f, 0.030f),
+                      0, 0.008f);
+            mb.AddCylinder(new Vector3(0f, H + 0.010f, -0.042f), 0.026f, 0.026f, 0.030f, 12, 0,
+                           Quaternion.identity);
+            mb.AddCylinder(new Vector3(0f, H + 0.032f, -0.042f), 0.028f, 0.026f, 0.018f, 12, 1,
+                           Quaternion.identity);
+
+            // Spout, clipped to the side the way it is stored.
+            mb.AddCylinder(new Vector3(W * 0.5f + 0.014f, H * 0.55f, 0.030f), 0.014f, 0.010f,
+                           0.230f, 8, 1, Quaternion.Euler(14f, 0f, 6f));
+
+            Finish(ctx, mb, "Carry_FuelCan", new[] { Keys.PaintedRed, Keys.ElectricalPlastic },
+                   parent, at, "can of petrol", 4.2f,
+                   new Vector3(0.28f, -0.26f, 0.48f), Vector3.zero);
         }
 
         private static void Finish(BuildContext ctx, MeshBuilder mb, string name, string[] materials,

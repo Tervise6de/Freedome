@@ -99,6 +99,67 @@ namespace Freedome.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// The mower's handle tubes have to join the deck to the grips.
+        ///
+        /// They did not. Each tube was rotated the wrong way about X, so it ran from
+        /// a point 856 mm behind the machine on the floor up to a point over the
+        /// deck, passing through neither the mower nor the cross grip it was
+        /// supposed to hold up - two sticks and a floating bar. The sign of a
+        /// rotation about X has now caught out the door, the ridge cap and this.
+        /// </summary>
+        [Test]
+        public void TheMowerHandleJoinsTheDeckToTheGrips()
+        {
+            Vector3 foot = PropsBuilder.MowerHandleFoot;
+            Vector3 grip = PropsBuilder.MowerHandleGrip;
+
+            Vector3 run = grip - foot;
+            float lean = -Mathf.Atan2(-run.z, run.y) * Mathf.Rad2Deg;
+
+            // Reconstruct the tube the way the builder places it, then check where
+            // its two ends actually land.
+            Vector3 centre = new Vector3(foot.x, (foot.y + grip.y) * 0.5f,
+                                         (foot.z + grip.z) * 0.5f);
+            Vector3 axis = Quaternion.Euler(lean, 0f, 0f) * Vector3.up;
+
+            Vector3 top = centre + (axis * run.magnitude * 0.5f);
+            Vector3 bottom = centre - (axis * run.magnitude * 0.5f);
+
+            Assert.Less(Vector3.Distance(top, grip), 0.005f,
+                $"the handle tube's top end is at {top}, and the grip is at {grip}");
+            Assert.Less(Vector3.Distance(bottom, foot), 0.005f,
+                $"the handle tube's bottom end is at {bottom}, and the deck bracket is at {foot}");
+
+            Assert.Less(grip.z, foot.z,
+                "the handle leans forwards over the deck instead of back toward the operator");
+        }
+
+        /// <summary>
+        /// Both of the mower's controls have to be on the mower, and far enough apart
+        /// that looking at one does not find the other.
+        /// </summary>
+        [Test]
+        public void TheMowerControlsAreOnTheMachineAndNotOnTopOfEachOther()
+        {
+            Vector3 cap = PropsBuilder.MowerFillerCap;
+            Vector3 starter = PropsBuilder.MowerStarterGrip;
+
+            Assert.Greater(Vector3.Distance(cap, starter), 0.30f,
+                "the filler cap and the starter grip are close enough to be ambiguous " +
+                "at the end of an interaction ray");
+
+            foreach (Vector3 control in new[] { cap, starter })
+            {
+                Assert.Less(Mathf.Abs(control.x), PropsBuilder.MowerDeckWidth,
+                    "a mower control sits outboard of the machine");
+                Assert.Greater(control.y, PropsBuilder.MowerDeckY,
+                    "a mower control sits below the deck, where nobody can reach it");
+                Assert.LessOrEqual(control.y, PropsBuilder.MowerHandleGrip.y,
+                    "a mower control sits above the handlebar");
+            }
+        }
+
         [Test]
         public void CarryablesStartInsideTheRoom()
         {
